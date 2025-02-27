@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  app:
+    build: .
+    container_name: legit_app
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - backend
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+    networks:
+      - backend
+
+volumes:
+  pg_data:
+
+networks:
+  backend:
