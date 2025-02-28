@@ -1,17 +1,18 @@
 package myavocat.legit.service;
 
 import myavocat.legit.dto.UserDTO;
-import myavocat.legit.model.User;
 import myavocat.legit.model.Role;
-import myavocat.legit.repository.UserRepository;
+import myavocat.legit.model.User;
+import myavocat.legit.model.Office;
 import myavocat.legit.repository.RoleRepository;
+import myavocat.legit.repository.UserRepository;
+import myavocat.legit.repository.OfficeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -21,10 +22,13 @@ public class UserService {
     private UserRepository userRepository;
 
     @Autowired
-    private RoleRepository roleRepository;
+    private OfficeRepository officeRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
@@ -52,56 +56,76 @@ public class UserService {
         user.setNom(userDTO.getNom());
         user.setPrenom(userDTO.getPrenom());
         user.setEmail(userDTO.getEmail());
-        user.setPassword(passwordEncoder.encode(userDTO.getPassword())); // Encoder le mot de passe
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
 
-        // Vérifier que le rôle existe et le récupérer
+        // 🔍 Log pour voir si `roleName` est bien reçu
+        System.out.println("🔍 Recherche du rôle : " + userDTO.getRoleName());
+
         Role role = roleRepository.findByName(userDTO.getRoleName())
-                .orElseThrow(() -> new RuntimeException("⚠ Rôle non trouvé en base : " + userDTO.getRoleName()));
+                .orElseThrow(() -> new RuntimeException("❌ Rôle introuvable : " + userDTO.getRoleName()));
 
-        System.out.println("✅ Rôle récupéré : " + role.getName() + " (ID: " + role.getId() + ")"); // 🔥 Vérification
+        System.out.println("✅ Rôle trouvé : " + role.getName());
 
-        // Assigner le rôle à l'utilisateur
         user.setRole(role);
 
         return userRepository.save(user);
     }
 
-    // Récupérer tous les utilisateurs
+
     @Transactional(readOnly = true)
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // Mettre à jour un utilisateur
     @Transactional
     public User updateUser(UUID id, UserDTO userDTO) {
         return userRepository.findById(id).map(user -> {
             user.setNom(userDTO.getNom());
             user.setPrenom(userDTO.getPrenom());
             user.setEmail(userDTO.getEmail());
-
-            // Mettre à jour le mot de passe seulement si un nouveau est fourni
-            if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
-                user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-            }
-
-            // Mise à jour du rôle si fourni
-            if (userDTO.getRoleName() != null) {
-                Role role = roleRepository.findByName(userDTO.getRoleName())
-                        .orElseThrow(() -> new RuntimeException("⚠ Rôle non trouvé en base : " + userDTO.getRoleName()));
-                user.setRole(role);
-            }
-
+            user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
             return userRepository.save(user);
         }).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
-    // ✅ Supprimer un utilisateur
     @Transactional
     public void deleteUser(UUID id) {
         if (!userRepository.existsById(id)) {
             throw new RuntimeException("User not found with id: " + id);
         }
         userRepository.deleteById(id);
+    }
+
+    @Transactional
+    public User assignUserToOffice(UUID userId, UUID officeId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        Office office = officeRepository.findById(officeId)
+                .orElseThrow(() -> new RuntimeException("Office not found with id: " + officeId));
+
+        user.setOffice(office);
+        return userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> getUsersByOffice(UUID officeId) {
+        return userRepository.findByOfficeId(officeId);
+    }
+
+    @Transactional
+    public User removeUserFromOffice(UUID userId, UUID officeId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        Office office = officeRepository.findById(officeId)
+                .orElseThrow(() -> new RuntimeException("Office not found with id: " + officeId));
+
+        if (user.getOffice() == null || !user.getOffice().getId().equals(officeId)) {
+            throw new RuntimeException("User is not assigned to this office");
+        }
+
+        user.setOffice(null);
+        return userRepository.save(user);
     }
 }

@@ -102,4 +102,25 @@ public class UserController {
             return new ApiResponse(false, "User deletion failed: " + e.getMessage());
         }
     }
+
+
+    @PostMapping("/{userId}/office/{officeId}")
+    public ApiResponse assignUserToOffice(@PathVariable UUID userId, @PathVariable UUID officeId) {
+        try {
+            User updatedUser = userService.assignUserToOffice(userId, officeId);
+            return new ApiResponse(true, "User assigned to office successfully", updatedUser);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Failed to assign user to office: " + e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{userId}/office/{officeId}")
+    public ApiResponse removeUserFromOffice(@PathVariable UUID userId, @PathVariable UUID officeId) {
+        try {
+            User updatedUser = userService.removeUserFromOffice(userId, officeId);
+            return new ApiResponse(true, "User removed from office successfully", updatedUser);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Failed to remove user from office: " + e.getMessage());
+        }
+    }
 }
