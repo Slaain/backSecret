@@ -6,6 +6,7 @@ import myavocat.legit.model.User;
 import myavocat.legit.response.ApiResponse;
 import java.util.UUID;
 import myavocat.legit.service.UserService;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -63,4 +64,42 @@ public class UserController {
         return new ApiResponse(true, exists ? "User exists" : "User does not exist", exists);
     }
 
+
+    @GetMapping
+    public ApiResponse getAllUsers() {
+        try {
+            List<User> users = userService.getAllUsers();
+            users.forEach(user -> user.setPassword(null)); // Masquer les mots de passe
+            return new ApiResponse(true, "Users retrieved successfully", users);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Failed to retrieve users: " + e.getMessage());
+        }
+    }
+
+
+    @PutMapping("/{id}")
+//    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
+    public ApiResponse updateUser(@PathVariable UUID id, @Valid @RequestBody UserDTO userDTO) {
+        try {
+            User updatedUser = userService.updateUser(id, userDTO);
+            if (updatedUser != null) {
+                updatedUser.setPassword(null);
+            }
+            return new ApiResponse(true, "User updated successfully", updatedUser);
+        } catch (Exception e) {
+            return new ApiResponse(false, "User update failed: " + e.getMessage());
+        }
+    }
+
+
+    @DeleteMapping("/{id}")
+//    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse deleteUser(@PathVariable UUID id) {
+        try {
+            userService.deleteUser(id);
+            return new ApiResponse(true, "User deleted successfully");
+        } catch (Exception e) {
+            return new ApiResponse(false, "User deletion failed: " + e.getMessage());
+        }
+    }
 }

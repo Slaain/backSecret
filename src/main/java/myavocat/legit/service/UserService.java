@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,11 +30,6 @@ public class UserService {
         return userRepository.existsByEmail(email);
     }
 
-    // Supprimez cette méthode qui retourne un Optional
-    // public Optional<User> findByEmail(String email) {
-    //     return userRepository.findByEmail(email);
-    // }
-
     @Transactional(readOnly = true)
     public User getUserById(UUID id) {
         return userRepository.findById(id)
@@ -45,7 +41,6 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
     }
-
 
     @Transactional
     public User createUser(UserDTO userDTO) {
@@ -68,11 +63,45 @@ public class UserService {
         // Assigner le rôle à l'utilisateur
         user.setRole(role);
 
-        // Vérifier si le rôle est bien affecté
-        if (user.getRole() == null) {
-            throw new RuntimeException("❌ Le rôle est toujours null après affectation !");
-        }
-
         return userRepository.save(user);
+    }
+
+    // ✅ Récupérer tous les utilisateurs
+    @Transactional(readOnly = true)
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    // ✅ Mettre à jour un utilisateur
+    @Transactional
+    public User updateUser(UUID id, UserDTO userDTO) {
+        return userRepository.findById(id).map(user -> {
+            user.setNom(userDTO.getNom());
+            user.setPrenom(userDTO.getPrenom());
+            user.setEmail(userDTO.getEmail());
+
+            // Mettre à jour le mot de passe seulement si un nouveau est fourni
+            if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
+                user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+            }
+
+            // Mise à jour du rôle si fourni
+            if (userDTO.getRoleName() != null) {
+                Role role = roleRepository.findByName(userDTO.getRoleName())
+                        .orElseThrow(() -> new RuntimeException("⚠ Rôle non trouvé en base : " + userDTO.getRoleName()));
+                user.setRole(role);
+            }
+
+            return userRepository.save(user);
+        }).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+    }
+
+    // ✅ Supprimer un utilisateur
+    @Transactional
+    public void deleteUser(UUID id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found with id: " + id);
+        }
+        userRepository.deleteById(id);
     }
 }
