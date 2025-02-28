@@ -30,6 +30,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.flywaydb:flyway-core")
+	implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
 	implementation("org.flywaydb:flyway-database-postgresql")
 
 	// JWT
