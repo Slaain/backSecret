@@ -71,17 +71,19 @@ public class RoleService {
         return convertToDTO(updatedRole);
     }
 
+
     @Transactional
     public void deleteRole(Long id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found with id: " + id));
 
-        // Vérifier si des utilisateurs sont associés à ce rôle
+        // Vérifier si des utilisateurs utilisent ce rôle
         if (!role.getUsers().isEmpty()) {
-            throw new IllegalStateException("Cannot delete role as it is assigned to users");
+            throw new IllegalStateException("Cannot delete role with id " + id + " as it is assigned to " +
+                    role.getUsers().size() + " users. Remove the role from these users first.");
         }
 
-        roleRepository.delete(role);
+        roleRepository.deleteById(id);
     }
 
     // Méthode d'initialisation pour créer les rôles par défaut
