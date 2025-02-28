@@ -22,6 +22,10 @@ public class Role {
     @OneToMany(mappedBy = "role")
     private Set<User> users = new HashSet<>();
 
+    @ManyToOne
+    @JoinColumn(name = "office_id")
+    private Office office;
+
     // Constructeurs
     public Role() {
     }
@@ -42,6 +46,14 @@ public class Role {
 
     public String getName() {
         return name;
+    }
+
+    public Office getOffice() {
+        return office;
+    }
+
+    public void setOffice(Office office) {
+        this.office = office;
     }
 
     public void setName(String name) {

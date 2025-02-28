@@ -9,7 +9,6 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "users")
-
 public class User {
 
     @Id
@@ -33,11 +32,26 @@ public class User {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @ManyToOne
+    @JoinColumn(name = "office_id")
+    private Office office;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public User() {
+    }
+
+    public Office getOffice() {
+        return office;
+    }
+
+    public void setOffice(Office office) {
+        this.office = office;
     }
 }

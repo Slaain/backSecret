@@ -15,6 +15,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
 
+    // Trouver tous les utilisateurs assignés à un cabinet
+    List<User> findByOfficeId(UUID officeId);
 
     // Rechercher des utilisateurs par nom ou prénom
     List<User> findByNomContainingIgnoreCaseOrPrenomContainingIgnoreCase(String nom, String prenom);
