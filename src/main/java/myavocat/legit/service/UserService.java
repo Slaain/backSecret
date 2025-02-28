@@ -66,13 +66,13 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    // ✅ Récupérer tous les utilisateurs
+    // Récupérer tous les utilisateurs
     @Transactional(readOnly = true)
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // ✅ Mettre à jour un utilisateur
+    // Mettre à jour un utilisateur
     @Transactional
     public User updateUser(UUID id, UserDTO userDTO) {
         return userRepository.findById(id).map(user -> {
