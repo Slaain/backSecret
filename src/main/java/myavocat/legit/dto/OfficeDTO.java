@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class OfficeDTO {
-
     @NotBlank(message = "Le nom est obligatoire")
     @Size(max = 100, message = "Le nom ne peut pas dépasser 100 caractères")
     private String name;
@@ -25,16 +24,22 @@ public class OfficeDTO {
     @Size(max = 20, message = "Le SIRET ne peut pas dépasser 20 caractères")
     private String siret;
 
+    // Nouveau champ pour le mot de passe du cabinet
+    @NotBlank(message = "Le mot de passe du cabinet est obligatoire")
+    @Size(min = 6, message = "Le mot de passe doit contenir au moins 6 caractères")
+    private String password;
+
     private boolean actif = true;
 
     public OfficeDTO() {}
 
-    public OfficeDTO(String name, String address, String phone, String email, String siret, boolean actif) {
+    public OfficeDTO(String name, String address, String phone, String email, String siret, String password, boolean actif) {
         this.name = name;
         this.address = address;
         this.phone = phone;
         this.email = email;
         this.siret = siret;
+        this.password = password;
         this.actif = actif;
     }
 
@@ -52,6 +57,9 @@ public class OfficeDTO {
 
     public String getSiret() { return siret; }
     public void setSiret(String siret) { this.siret = siret; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     public boolean isActif() { return actif; }
     public void setActif(boolean actif) { this.actif = actif; }

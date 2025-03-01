@@ -6,6 +6,7 @@ import myavocat.legit.repository.OfficeRepository;
 import myavocat.legit.repository.UserRepository;
 import myavocat.legit.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,9 @@ public class OfficeService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public boolean existsByName(String name) {
         return officeRepository.existsByName(name);
@@ -59,6 +63,13 @@ public class OfficeService {
         office.setSiret(officeDTO.getSiret());
         office.setActif(officeDTO.isActif());
 
+        // Encoder le mot de passe avant de le stocker
+        if (officeDTO.getPassword() != null && !officeDTO.getPassword().isEmpty()) {
+            office.setPassword(passwordEncoder.encode(officeDTO.getPassword()));
+        } else {
+            throw new RuntimeException("Le mot de passe du cabinet est obligatoire");
+        }
+
         return officeRepository.save(office);
     }
 
@@ -76,6 +87,12 @@ public class OfficeService {
             office.setEmail(officeDTO.getEmail());
             office.setSiret(officeDTO.getSiret());
             office.setActif(officeDTO.isActif());
+
+            // Mettre à jour le mot de passe uniquement s'il est fourni
+            if (officeDTO.getPassword() != null && !officeDTO.getPassword().isEmpty()) {
+                office.setPassword(passwordEncoder.encode(officeDTO.getPassword()));
+            }
+
             return officeRepository.save(office);
         }).orElseThrow(() -> new RuntimeException("Office not found with id: " + id));
     }
@@ -86,5 +103,30 @@ public class OfficeService {
             throw new RuntimeException("Office not found with id: " + id);
         }
         officeRepository.deleteById(id);
+    }
+
+    /**
+     * Vérifie les identifiants du cabinet
+     * @param officeName Nom du cabinet
+     * @param password Mot de passe non encodé
+     * @return Le cabinet si l'authentification réussit
+     * @throws RuntimeException si l'authentification échoue
+     */
+    @Transactional(readOnly = true)
+    public Office authenticateOffice(String officeName, String password) {
+        Office office = officeRepository.findByName(officeName)
+                .orElseThrow(() -> new RuntimeException("Cabinet introuvable"));
+
+        // Vérifier le mot de passe
+        if (!passwordEncoder.matches(password, office.getPassword())) {
+            throw new RuntimeException("Mot de passe du cabinet incorrect");
+        }
+
+        // Vérifier si le cabinet est actif
+        if (!office.isActif()) {
+            throw new RuntimeException("Ce cabinet est inactif");
+        }
+
+        return office;
     }
 }
