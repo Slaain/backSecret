@@ -24,6 +24,10 @@ public class Office {
     private String siret;
 
     @Column(nullable = false)
+    @JsonIgnore  // Important pour ne pas exposer le mot de passe dans les réponses API
+    private String password;
+
+    @Column(nullable = false)
     private boolean actif = true;
 
     @Column(nullable = false)
@@ -94,6 +98,14 @@ public class Office {
 
     public void setSiret(String siret) {
         this.siret = siret;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public boolean isActif() {

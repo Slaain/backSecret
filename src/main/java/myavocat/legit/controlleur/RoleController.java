@@ -2,17 +2,14 @@ package myavocat.legit.controller;
 
 import jakarta.validation.Valid;
 import myavocat.legit.dto.RoleDTO;
-import myavocat.legit.model.User;
 import myavocat.legit.response.ApiResponse;
-import java.util.UUID;
 import myavocat.legit.exception.ResourceNotFoundException;
 import myavocat.legit.service.RoleService;
-import myavocat.legit.service.UserService;
+
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
