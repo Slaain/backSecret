@@ -9,6 +9,8 @@ import myavocat.legit.response.ApiResponse;
 import myavocat.legit.service.OfficeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import myavocat.legit.dto.OfficeWithUsersDTO;
+import java.util.stream.Collectors;
 
 import java.util.List;
 import java.util.UUID;
@@ -90,14 +92,42 @@ public class OfficeController {
     }
 
     @GetMapping("/{officeId}/users")
-    public ApiResponse getOfficeUsers(@PathVariable UUID officeId) {
+    public ApiResponse getOfficeWithUsers(@PathVariable UUID officeId) {
         try {
+            // Récupérer les informations du cabinet
+            Office office = officeService.getOfficeById(officeId);
+
+            // Récupérer les utilisateurs du cabinet
             List<User> users = userService.getUsersByOffice(officeId);
-            // Masquer les mots de passe dans la réponse
-            users.forEach(user -> user.setPassword(null));
-            return new ApiResponse(true, "Office users retrieved successfully", users);
+
+            // Transformer les utilisateurs en UserInOfficeDTO
+            List<OfficeWithUsersDTO.UserInOfficeDTO> userDTOs = users.stream()
+                    .map(user -> new OfficeWithUsersDTO.UserInOfficeDTO(
+                            user.getId(),
+                            user.getNom(),
+                            user.getPrenom(),
+                            user.getEmail(),
+                            user.getRole().getName(), // Supposant que User a un Role qui a un getName()
+                            user.getCreatedAt()
+                    ))
+                    .collect(Collectors.toList());
+
+            // Créer le DTO complet
+            OfficeWithUsersDTO officeWithUsersDTO = new OfficeWithUsersDTO(
+                    office.getId(),
+                    office.getName(),
+                    office.getAddress(),
+                    office.getPhone(),
+                    office.getEmail(),
+                    office.getSiret(),
+                    office.isActif(),
+                    office.getCreatedAt(),
+                    userDTOs
+            );
+
+            return new ApiResponse(true, "Office with users retrieved successfully", officeWithUsersDTO);
         } catch (Exception e) {
-            return new ApiResponse(false, "Failed to retrieve office users: " + e.getMessage());
+            return new ApiResponse(false, "Failed to retrieve office with users: " + e.getMessage());
         }
     }
 }
