@@ -28,8 +28,12 @@ public class AdversaireController {
 
     @GetMapping("/dossier/{dossierId}")
     public ApiResponse getAdversairesByDossier(@PathVariable UUID dossierId) {
-        List<AdversaireDTO> adversaires = adversaireService.getAdversairesByDossier(dossierId);
-        return new ApiResponse(true, "Adversaires récupérés", adversaires);
+        try {
+            List<AdversaireDTO> adversaires = adversaireService.getAdversairesByDossier(dossierId);
+            return new ApiResponse(true, "Adversaires récupérés", adversaires);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur lors de la récupération des adversaires: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
