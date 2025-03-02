@@ -125,4 +125,23 @@ public class DossierService {
         return dossierRepository.save(dossier);
     }
 
+    @Transactional
+    public Dossier assignAdversaireToDossier(UUID userId, UUID dossierId, UUID adversaireId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+        Adversaire adversaire = adversaireRepository.findById(adversaireId)
+                .orElseThrow(() -> new RuntimeException("Adversaire introuvable"));
+
+        // Vérification : l'utilisateur doit faire partie du même cabinet que le dossier
+        if (!user.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : vous ne pouvez pas modifier ce dossier.");
+        }
+
+        dossier.setAdversaire(adversaire); // ✅ Assigne l'adversaire au dossier
+        return dossierRepository.save(dossier);
+    }
 }

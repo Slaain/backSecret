@@ -1,11 +1,13 @@
 package myavocat.legit.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "adversaires")
 public class Adversaire {
@@ -14,19 +16,23 @@ public class Adversaire {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String nom;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String prenom;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(unique = true, length = 255)
     private String email;
 
     @Column(length = 15)
     private String telephone;
 
     @ManyToOne
-    @JoinColumn(name = "dossier_id", nullable = false)
-    private Dossier dossier;
+    @JoinColumn(name = "dossier_id")
+    private Dossier dossier; // Un adversaire appartient à un seul dossier
+
+    public Adversaire() {}
+
+    // Getters et Setters
 }

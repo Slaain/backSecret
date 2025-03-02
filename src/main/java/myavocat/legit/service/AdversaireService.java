@@ -40,7 +40,7 @@ public class AdversaireService {
 
     @Transactional(readOnly = true)
     public List<AdversaireDTO> getAdversairesByDossier(UUID dossierId) {
-        return adversaireRepository.findByDossier_Id(dossierId)
+        return adversaireRepository.findByDossierId(dossierId)
                 .stream().map(this::convertToDTO)
                 .collect(Collectors.toList());
     }

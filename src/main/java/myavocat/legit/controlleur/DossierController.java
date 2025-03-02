@@ -91,4 +91,18 @@ public class DossierController {
         }
     }
 
+    @PatchMapping("/{userId}/{dossierId}/assign-adversaire/{adversaireId}")
+    public ApiResponse assignAdversaireToDossier(
+            @PathVariable UUID userId,
+            @PathVariable UUID dossierId,
+            @PathVariable UUID adversaireId) {
+        try {
+            Dossier updatedDossier = dossierService.assignAdversaireToDossier(userId, dossierId, adversaireId);
+            return new ApiResponse(true, "Adversaire assigné au dossier avec succès", updatedDossier);
+        } catch (RuntimeException e) {
+            return new ApiResponse(false, e.getMessage(), null);
+        }
+    }
+
+
 }
