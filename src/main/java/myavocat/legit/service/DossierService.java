@@ -144,4 +144,16 @@ public class DossierService {
         dossier.setAdversaire(adversaire); // ✅ Assigne l'adversaire au dossier
         return dossierRepository.save(dossier);
     }
+
+    /**
+     * Mettre à jour le statut d'un dossier
+     */
+    @Transactional
+    public Dossier updateDossierStatut(UUID dossierId, String statut) {
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID: " + dossierId));
+
+        dossier.setStatut(statut);
+        return dossierRepository.save(dossier);
+    }
 }

@@ -86,9 +86,6 @@ public class AuthController {
         }
     }
 
-    /**
-     * Deuxième étape: authentification de l'utilisateur
-     */
     @PostMapping("/user")
     public ResponseEntity<?> authenticateUser(@RequestBody AuthRequestDTO request,
                                               @RequestHeader("X-Office-Token") String officeToken) {
@@ -97,16 +94,12 @@ public class AuthController {
 
             // Vérifier si l'email est vide
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(
-                        new AuthResponseDTO(null, null, null)
-                );
+                return ResponseEntity.badRequest().body(new AuthResponseDTO("L'adresse email est requise."));
             }
 
             // Vérifier si le mot de passe est vide
             if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(
-                        new AuthResponseDTO(null, null, null)
-                );
+                return ResponseEntity.badRequest().body(new AuthResponseDTO("Le mot de passe est requis."));
             }
 
             // Extraire les informations du token temporaire
@@ -115,48 +108,46 @@ public class AuthController {
 
             // Vérifier que le token temporaire est valide
             if (!officeAuthService.validateTempToken(officeToken, officeName)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                        new AuthResponseDTO(null, null, null)
-                );
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponseDTO("Token de cabinet invalide ou expiré."));
             }
 
             // Trouver l'utilisateur par email
             User user = userService.findByEmail(request.getEmail());
 
-            // Vérifier le mot de passe
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponseDTO("Utilisateur introuvable."));
+            }
+
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                        new AuthResponseDTO(null, null, null)
-                );
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponseDTO("Mot de passe incorrect."));
             }
 
-            // Vérifier que l'utilisateur appartient au cabinet spécifié
             if (user.getOffice() == null || !user.getOffice().getId().toString().equals(officeId)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                        new AuthResponseDTO(null, null, null)
-                );
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponseDTO("Utilisateur non autorisé à accéder à ce cabinet."));
             }
 
-            // Génération du token final avec toutes les informations
+            // Génération du token
             String token = jwtUtil.generateToken(
                     user.getEmail(),
                     user.getOffice().getId(),
                     user.getOffice().getName()
             );
 
-            logger.info("Utilisateur authentifié avec succès: {}", user.getEmail());
+            logger.info("✅ Utilisateur authentifié avec succès: {}", user.getEmail());
 
+            // ✅ Retourne bien `userId` et `officeId`
             return ResponseEntity.ok(new AuthResponseDTO(
                     token,
                     user.getEmail(),
-                    user.getRole().getName()
+                    user.getRole().getName(),
+                    user.getId().toString(),
+                    user.getOffice().getId().toString()
             ));
 
         } catch (Exception e) {
-            logger.error("Erreur lors de l'authentification utilisateur", e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    new AuthResponseDTO(null, null, null)
-            );
+            logger.error("❌ Erreur lors de l'authentification utilisateur", e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponseDTO("Une erreur est survenue lors de l'authentification."));
         }
     }
+
 }

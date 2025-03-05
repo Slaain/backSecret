@@ -5,6 +5,7 @@ import myavocat.legit.response.ApiResponse;
 import myavocat.legit.service.DossierService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 import java.util.List;
 import java.util.UUID;
@@ -104,5 +105,25 @@ public class DossierController {
         }
     }
 
+    /**
+     * Mettre à jour le statut d'un dossier
+     */
+    @PutMapping("/{dossierId}/statut")
+    public ApiResponse updateDossierStatut(
+            @PathVariable UUID dossierId,
+            @RequestBody Map<String, String> payload) {
+        try {
+            String statut = payload.get("statut");
+            if (statut == null) {
+                return new ApiResponse(false, "Le statut est requis", null);
+            }
 
+            Dossier updatedDossier = dossierService.updateDossierStatut(dossierId, statut);
+            return new ApiResponse(true, "Statut du dossier mis à jour avec succès", updatedDossier);
+        } catch (RuntimeException e) {
+            return new ApiResponse(false, "Erreur lors de la mise à jour du statut: " + e.getMessage(), null);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur inconnue: " + e.getMessage(), null);
+        }
+    }
 }
