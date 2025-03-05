@@ -61,13 +61,24 @@ public class ClientService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        UUID officeId = user.getOffice().getId(); // Cabinet de l'utilisateur
+        UUID officeId = user.getOffice().getId();
 
         // Récupérer les clients ayant au moins un dossier dans le cabinet de l'utilisateur
-        return dossierRepository.findAll().stream()
+        List<Dossier> dossiers = dossierRepository.findAll().stream()
                 .filter(dossier -> dossier.getOffice().getId().equals(officeId))
+                .collect(Collectors.toList());
+
+        System.out.println("Nombre de dossiers trouvés pour l'office " + officeId + ": " + dossiers.size());
+
+        List<Client> clients = dossiers.stream()
                 .map(Dossier::getClient)
+                .filter(client -> client != null)  // Cette ligne filtre les clients null
                 .distinct()
+                .collect(Collectors.toList());
+
+        System.out.println("Nombre de clients uniques et non-null: " + clients.size());
+
+        return clients.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
