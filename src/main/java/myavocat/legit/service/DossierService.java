@@ -141,9 +141,12 @@ public class DossierService {
             throw new RuntimeException("Accès refusé : vous ne pouvez pas modifier ce dossier.");
         }
 
-        dossier.setAdversaire(adversaire); // ✅ Assigne l'adversaire au dossier
+        dossier.setAdversaire(adversaire);  // ✅ Assigne l'objet Adversaire
+        dossier.setAdversaireId(adversaire.getId()); // ✅ Met à jour adversaireId
+
         return dossierRepository.save(dossier);
     }
+
 
     /**
      * Mettre à jour le statut d'un dossier
@@ -154,6 +157,25 @@ public class DossierService {
                 .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID: " + dossierId));
 
         dossier.setStatut(statut);
+        return dossierRepository.save(dossier);
+    }
+    @Transactional
+    public Dossier assignAvocatToDossier(UUID dossierId, UUID userId) {
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable avec l'ID : " + dossierId));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable avec l'ID : " + userId));
+
+        // Vérification : l'utilisateur doit faire partie du même cabinet que le dossier
+        if (!user.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : vous ne pouvez pas modifier ce dossier.");
+        }
+
+        // Assigner l'avocat au dossier
+        dossier.setAvocat(user);
+
+        // Sauvegarder et retourner le dossier mis à jour
         return dossierRepository.save(dossier);
     }
 }
