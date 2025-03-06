@@ -64,4 +64,29 @@ public class Dossier {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
+    // Ces champs sont utilisés uniquement pour le transfert des données, pas pour le stockage
+    @Transient // Cette annotation indique qu'ils ne sont pas persistés en base de données
+    private UUID clientId;
+
+    @Transient
+    private UUID adversaireId;
+
+    // Getters et setters
+    public UUID getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(UUID clientId) {
+        this.clientId = clientId;
+    }
+
+    public UUID getAdversaireId() {
+        return adversaireId;
+    }
+
+    public void setAdversaireId(UUID adversaireId) {
+        this.adversaireId = adversaireId;
+    }
+
+
 }

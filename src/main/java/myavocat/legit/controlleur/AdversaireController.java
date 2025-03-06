@@ -26,30 +26,38 @@ public class AdversaireController {
         }
     }
 
-    @GetMapping("/dossier/{dossierId}")
-    public ApiResponse getAdversairesByDossier(@PathVariable UUID dossierId) {
+    @GetMapping("/{userId}")
+    public ApiResponse getAllAdversaires(@PathVariable UUID userId) {
         try {
-            List<AdversaireDTO> adversaires = adversaireService.getAdversairesByDossier(dossierId);
+            List<AdversaireDTO> adversaires = adversaireService.getAllAdversaires(userId);
             return new ApiResponse(true, "Adversaires récupérés", adversaires);
         } catch (Exception e) {
             return new ApiResponse(false, "Erreur lors de la récupération des adversaires: " + e.getMessage());
         }
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse getAdversaireById(@PathVariable UUID id) {
+    @GetMapping("/{userId}/{adversaireId}")
+    public ApiResponse getAdversaireById(@PathVariable UUID userId, @PathVariable UUID adversaireId) {
         try {
-            AdversaireDTO adversaire = adversaireService.getAdversaireById(id);
+            AdversaireDTO adversaire = adversaireService.getAdversaireById(adversaireId, userId);
             return new ApiResponse(true, "Adversaire trouvé", adversaire);
         } catch (Exception e) {
-            return new ApiResponse(false, "Adversaire non trouvé: " + e.getMessage());
+            return new ApiResponse(false, "Accès refusé ou adversaire non trouvé: " + e.getMessage());
         }
     }
-
-    @DeleteMapping("/{id}")
-    public ApiResponse deleteAdversaire(@PathVariable UUID id) {
+    @GetMapping("/all")
+    public ApiResponse getAllAdversairesNoFilter() {
         try {
-            adversaireService.deleteAdversaire(id);
+            List<AdversaireDTO> adversaires = adversaireService.findAll(); // Méthode à créer qui retourne tous les adversaires
+            return new ApiResponse(true, "Tous les adversaires récupérés", adversaires);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur lors de la récupération des adversaires: " + e.getMessage());
+        }
+    }
+    @DeleteMapping("/{userId}/{adversaireId}")
+    public ApiResponse deleteAdversaire(@PathVariable UUID userId, @PathVariable UUID adversaireId) {
+        try {
+            adversaireService.deleteAdversaire(adversaireId, userId);
             return new ApiResponse(true, "Adversaire supprimé");
         } catch (Exception e) {
             return new ApiResponse(false, "Erreur lors de la suppression: " + e.getMessage());

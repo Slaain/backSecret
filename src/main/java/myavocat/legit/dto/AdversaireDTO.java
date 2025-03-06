@@ -10,5 +10,9 @@ public class AdversaireDTO {
     private String prenom;
     private String email;
     private String telephone;
-    private UUID dossierId; // L'adversaire appartient à un seul dossier
+    private String type;
+    private String qualite;
+    private String commune;
+    private UUID officeId;
+    private UUID dossierId; // Pour la compatibilité avec le code existant
 }
