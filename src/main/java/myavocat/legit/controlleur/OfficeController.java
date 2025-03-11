@@ -6,6 +6,8 @@ import myavocat.legit.model.Office;
 import myavocat.legit.model.User;
 import myavocat.legit.service.UserService;
 import myavocat.legit.response.ApiResponse;
+import myavocat.legit.service.DossierService;
+import myavocat.legit.model.Client;
 import myavocat.legit.service.OfficeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,10 @@ public class OfficeController {
 
     @Autowired
     private OfficeService officeService;
+
+    @Autowired
+    private DossierService dossierService;
+
 
     @Autowired
     private UserService userService;
@@ -107,7 +113,7 @@ public class OfficeController {
                             user.getNom(),
                             user.getPrenom(),
                             user.getEmail(),
-                            user.getRole().getName(), // Supposant que User a un Role qui a un getName()
+                            user.getRole().getName(),
                             user.getCreatedAt()
                     ))
                     .collect(Collectors.toList());
@@ -130,4 +136,15 @@ public class OfficeController {
             return new ApiResponse(false, "Failed to retrieve office with users: " + e.getMessage());
         }
     }
+
+    @GetMapping("/{officeId}/clients")
+    public ApiResponse getClientsByOffice(@PathVariable UUID officeId) {
+        try {
+            List<Client> clients = dossierService.getClientsByOffice(officeId);
+            return new ApiResponse(true, "Clients récupérés avec succès", clients);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur lors de la récupération des clients : " + e.getMessage());
+        }
+    }
+
 }
