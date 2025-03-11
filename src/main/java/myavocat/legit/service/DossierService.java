@@ -178,4 +178,12 @@ public class DossierService {
         // Sauvegarder et retourner le dossier mis à jour
         return dossierRepository.save(dossier);
     }
+
+    @Transactional(readOnly = true)
+    public List<Client> getClientsByOffice(UUID officeId) {
+        return clientRepository.findByOfficeId(officeId);
+    }
+
+
+
 }
