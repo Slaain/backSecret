@@ -10,7 +10,8 @@ import java.util.UUID;
 @Repository
 public interface AdversaireRepository extends JpaRepository<Adversaire, UUID> {
     boolean existsByEmail(String email);
-
+    // Dans AdversaireRepository
+    List<Adversaire> findByOfficeId(UUID officeId);
     // Méthode pour trouver les adversaires par dossier
     List<Adversaire> findByDossiersId(UUID dossierId);
 }

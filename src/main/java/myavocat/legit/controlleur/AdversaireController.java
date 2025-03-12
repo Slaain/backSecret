@@ -45,11 +45,11 @@ public class AdversaireController {
             return new ApiResponse(false, "Accès refusé ou adversaire non trouvé: " + e.getMessage());
         }
     }
-    @GetMapping("/all")
-    public ApiResponse getAllAdversairesNoFilter() {
+    @GetMapping("/all/{officeId}")
+    public ApiResponse getAllAdversairesByOffice(@PathVariable UUID officeId) {
         try {
-            List<AdversaireDTO> adversaires = adversaireService.findAll(); // Méthode à créer qui retourne tous les adversaires
-            return new ApiResponse(true, "Tous les adversaires récupérés", adversaires);
+            List<AdversaireDTO> adversaires = adversaireService.getAllAdversairesByOffice(officeId);
+            return new ApiResponse(true, "Tous les adversaires du cabinet récupérés", adversaires);
         } catch (Exception e) {
             return new ApiResponse(false, "Erreur lors de la récupération des adversaires: " + e.getMessage());
         }
