@@ -146,6 +146,7 @@ public class AdversaireService {
         adversaireRepository.deleteById(adversaireId);
     }
 
+
     /**
      * Dissocier tous les adversaires d'un dossier
      */
@@ -197,5 +198,21 @@ public class AdversaireService {
         }
 
         return dto;
+    }
+    @Transactional(readOnly = true)
+    public List<AdversaireDTO> getAllAdversairesByOffice(UUID officeId) {
+        // Vérifier que le cabinet existe
+        if (!officeRepository.existsById(officeId)) {
+            throw new RuntimeException("Cabinet introuvable");
+        }
+
+        // Récupérer directement les adversaires par office_id
+        List<Adversaire> adversaires = adversaireRepository.findByOfficeId(officeId);
+
+        System.out.println("Nombre d'adversaires trouvés pour l'office " + officeId + ": " + adversaires.size());
+
+        return adversaires.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 }

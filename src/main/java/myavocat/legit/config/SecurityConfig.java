@@ -25,7 +25,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    config.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://127.0.0.1:3000","http://localhost:37001","http://localhost:4200"));
+                    config.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://127.0.0.1:3000","http://localhost:37001","http://localhost:4200","http://localhost:8080"));
                     config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     config.setAllowedHeaders(Arrays.asList("*"));
                     config.setAllowCredentials(true);
