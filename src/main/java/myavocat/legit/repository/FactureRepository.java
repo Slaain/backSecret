@@ -17,6 +17,8 @@ public interface FactureRepository extends JpaRepository<Facture, UUID> {
     @Query("SELECT f.numeroFacture FROM Facture f WHERE f.numeroFacture LIKE :pattern ORDER BY f.numeroFacture DESC LIMIT 1")
     String findLastFactureByClient(@Param("pattern") String pattern);
 
+
+
     /**
      * Calculer le montant total des factures émises pour un office spécifique
      */
@@ -45,6 +47,7 @@ public interface FactureRepository extends JpaRepository<Facture, UUID> {
      */
     @Query("SELECT f FROM Facture f WHERE f.dossier.office.id = :officeId")
     List<Facture> findAllByOffice(@Param("officeId") UUID officeId);
+
 
     /**
      * Récupérer une facture par son ID uniquement si elle appartient au même office
