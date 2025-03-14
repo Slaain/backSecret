@@ -181,4 +181,37 @@ public class FactureService {
         }
     }
 
+
+    /**
+     * Récupérer toutes les factures associées à un dossier
+     * @param userId ID de l'utilisateur faisant la demande
+     * @param dossierId ID du dossier
+     * @return Liste des factures du dossier
+     */
+    public List<FactureDTO> getFacturesByDossier(UUID userId, UUID dossierId) {
+        // Vérifier que l'utilisateur existe
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        // Vérifier l'appartenance au même cabinet
+        UUID officeId = user.getOffice().getId();
+
+        // Récupérer les factures associées à ce dossier
+        List<Facture> factures = factureRepository.findByDossierId(dossierId);
+
+        // Filtrer pour ne garder que les factures auxquelles l'utilisateur a accès
+        List<Facture> accessibleFactures = factures.stream()
+                .filter(facture -> facture.getDossier().getOffice().getId().equals(officeId))
+                .collect(Collectors.toList());
+
+        // Convertir en DTOs
+        return convertToFactureDTOList(accessibleFactures);
+    }
+
+    // Méthode utilitaire pour convertir une liste de Factures en une liste de FactureDTOs
+    private List<FactureDTO> convertToFactureDTOList(List<Facture> factures) {
+        return factures.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
 }

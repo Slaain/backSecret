@@ -116,6 +116,49 @@ public class DossierController {
     }
 
     /**
+     * Récupérer tous les dossiers d'un client spécifique, si l'utilisateur y a accès
+     */
+    @GetMapping("/{userId}/client/{clientId}")
+    public ApiResponse getDossiersByClient(@PathVariable UUID userId, @PathVariable UUID clientId) {
+        try {
+            // Utilisez la méthode existante pour récupérer tous les dossiers de l'utilisateur
+            List<Dossier> allDossiers = dossierService.getAllDossiers(userId);
+
+            // Filtrez pour ne garder que les dossiers du client spécifié
+            List<Dossier> clientDossiers = allDossiers.stream()
+                    .filter(dossier -> dossier.getClient() != null
+                            && dossier.getClient().getId().equals(clientId))
+                    .collect(Collectors.toList());
+
+            // Transformation en réponse JSON (comme dans la méthode getAllDossiers)
+            List<Map<String, Object>> dossiersResponse = clientDossiers.stream().map(dossier -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", dossier.getId());
+                map.put("reference", dossier.getReference());
+                map.put("nomDossier", dossier.getNomDossier());
+                map.put("typeAffaire", dossier.getTypeAffaire());
+                map.put("statut", dossier.getStatut());
+                map.put("qualiteProcedurale", dossier.getQualiteProcedurale());
+                map.put("createdAt", dossier.getCreatedAt());
+
+                // Inclure l'ID de l'adversaire en plus de l'objet complet
+                map.put("adversaire", dossier.getAdversaire());
+                map.put("adversaireId", dossier.getAdversaire() != null ? dossier.getAdversaire().getId() : null);
+
+                // Inclure l'ID du client
+                map.put("client", dossier.getClient());
+                map.put("clientId", dossier.getClient() != null ? dossier.getClient().getId() : null);
+
+                return map;
+            }).collect(Collectors.toList());
+
+            return new ApiResponse(true, "Dossiers du client récupérés avec succès", dossiersResponse);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur lors de la récupération des dossiers: " + e.getMessage(), null);
+        }
+    }
+
+    /**
      * Supprimer un dossier (seulement si l'utilisateur y est autorisé)
      */
     @DeleteMapping("/{userId}/{dossierId}")

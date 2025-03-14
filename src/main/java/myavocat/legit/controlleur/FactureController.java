@@ -2,6 +2,7 @@ package myavocat.legit.controller;
 
 import myavocat.legit.dto.FactureDTO;
 import myavocat.legit.model.StatutPaiement;
+import myavocat.legit.response.ApiResponse;
 import myavocat.legit.service.FactureService;
 import myavocat.legit.service.FactureExportService;
 import org.springframework.http.HttpHeaders;
@@ -109,5 +110,18 @@ public class FactureController {
                 .status(HttpStatus.OK)
                 .headers(headers)
                 .body(pdfBytes);
+    }
+    /**
+     * Récupérer toutes les factures associées à un dossier spécifique
+     */
+    @GetMapping("/dossier/{dossierId}")
+    public ApiResponse getFacturesByDossier(@PathVariable UUID userId, @PathVariable UUID dossierId) {
+        try {
+            // Utilisez le service existant pour récupérer les factures
+            List<FactureDTO> factures = factureService.getFacturesByDossier(userId, dossierId);
+            return new ApiResponse(true, "Factures du dossier récupérées avec succès", factures);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur lors de la récupération des factures: " + e.getMessage(), null);
+        }
     }
 }
