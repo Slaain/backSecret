@@ -19,4 +19,6 @@ public interface DossierRepository extends JpaRepository<Dossier, UUID> {
     List<Dossier> findByAvocatIdAndStatut(UUID avocatId, String statut);
 
 
+
+
 }

@@ -18,7 +18,7 @@ public interface FactureRepository extends JpaRepository<Facture, UUID> {
     String findLastFactureByClient(@Param("pattern") String pattern);
 
 
-
+    List<Facture> findByDossierId(UUID dossierId);
 
     /**
      * Calculer le montant total des factures émises pour un office spécifique
