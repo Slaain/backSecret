@@ -33,6 +33,10 @@ dependencies {
 	implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
 	implementation("org.flywaydb:flyway-database-postgresql")
 
+	//Mail
+	implementation ("org.springframework.boot:spring-boot-starter-mail")
+	implementation ("com.itextpdf:itext7-core:7.2.5")
+
 	// JWT
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")

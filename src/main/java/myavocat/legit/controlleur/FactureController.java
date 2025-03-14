@@ -3,6 +3,9 @@ package myavocat.legit.controller;
 import myavocat.legit.dto.FactureDTO;
 import myavocat.legit.model.StatutPaiement;
 import myavocat.legit.service.FactureService;
+import myavocat.legit.service.FactureExportService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +19,11 @@ import java.util.UUID;
 public class FactureController {
 
     private final FactureService factureService;
+    private final FactureExportService factureExportService;
 
-    public FactureController(FactureService factureService) {
+    public FactureController(FactureService factureService, FactureExportService factureExportService) {
         this.factureService = factureService;
+        this.factureExportService = factureExportService;
     }
 
     /**
@@ -88,5 +93,21 @@ public class FactureController {
     public ResponseEntity<String> relancerFacturesImpayees(@PathVariable UUID userId) {
         factureService.relancerFacturesImpayees(userId);
         return ResponseEntity.ok("Relances envoyées aux clients avec factures impayées.");
+    }
+
+    /**
+     * ✅ Exporter une facture en PDF
+     */
+    @GetMapping("/{id}/export-pdf")
+    public ResponseEntity<byte[]> exportFactureToPdf(@PathVariable UUID id) {
+        byte[] pdfBytes = factureExportService.generateFacturePdf(id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=facture_" + id + ".pdf");
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .headers(headers)
+                .body(pdfBytes);
     }
 }

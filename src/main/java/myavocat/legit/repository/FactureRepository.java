@@ -19,6 +19,7 @@ public interface FactureRepository extends JpaRepository<Facture, UUID> {
 
 
 
+
     /**
      * Calculer le montant total des factures émises pour un office spécifique
      */

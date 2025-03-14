@@ -37,17 +37,22 @@ public class FactureService {
 
     private String genererNumeroFacture(Client client) {
         String initials = (client.getNom().substring(0, 1) + client.getPrenom().substring(0, 1)).toUpperCase();
-        String lastFacture = factureRepository.findLastFactureByClient(initials + "%");
+        int currentYear = LocalDateTime.now().getYear();
+
+        // Recherche la dernière facture de l'année en cours
+        String pattern = initials + "-" + currentYear + "-%";
+        String lastFacture = factureRepository.findLastFactureByClient(pattern);
 
         int lastNum = 0;
         if (lastFacture != null) {
             try {
-                lastNum = Integer.parseInt(lastFacture.replaceAll("[^0-9]", ""));
+                lastNum = Integer.parseInt(lastFacture.substring(lastFacture.lastIndexOf('-') + 1));
             } catch (NumberFormatException ignored) {}
         }
 
-        return initials + String.format("%03d", lastNum + 1);
+        return initials + "-" + currentYear + "-" + String.format("%03d", lastNum + 1);
     }
+
 
     @Transactional
     public FactureDTO creerFacture(UUID userId, UUID clientId, UUID dossierId, String intitule, BigDecimal montantHt, boolean tvaApplicable) {
