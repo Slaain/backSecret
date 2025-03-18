@@ -1,15 +1,12 @@
 package myavocat.legit.service;
 
 import myavocat.legit.dto.FactureDTO;
-import myavocat.legit.model.Client;
-import myavocat.legit.model.Dossier;
-import myavocat.legit.model.Facture;
+import myavocat.legit.model.*;
 import myavocat.legit.model.StatutPaiement;
 import myavocat.legit.repository.ClientRepository;
 import myavocat.legit.repository.DossierRepository;
 import myavocat.legit.repository.FactureRepository;
 import myavocat.legit.repository.UserRepository;
-import myavocat.legit.model.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,7 +52,8 @@ public class FactureService {
 
 
     @Transactional
-    public FactureDTO creerFacture(UUID userId, UUID clientId, UUID dossierId, String intitule, BigDecimal montantHt, boolean tvaApplicable) {
+    public FactureDTO creerFacture(UUID userId, UUID clientId, UUID dossierId, String intitule,
+                                   BigDecimal montantHt, boolean tvaApplicable, myavocat.legit.model.ModePaiement modePaiement) {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new RuntimeException("Client introuvable avec l'ID: " + clientId));
 
@@ -86,6 +84,7 @@ public class FactureService {
         facture.setTvaApplicable(tvaApplicable);
         facture.setStatutPaiement(StatutPaiement.ATTENTE_REGLEMENT);
         facture.setDateEmission(LocalDateTime.now());
+        facture.setModePaiement(modePaiement); // Ajoutez cette ligne
 
         return convertToDTO(factureRepository.save(facture));
     }
