@@ -42,7 +42,19 @@ public class FactureController {
         BigDecimal montantHt = new BigDecimal(request.get("montantHt").toString());
         boolean tvaApplicable = (boolean) request.get("tvaApplicable");
 
-        FactureDTO factureDTO = factureService.creerFacture(userId, clientId, dossierId, intitule, montantHt, tvaApplicable);
+        // Récupérer le mode de paiement
+        myavocat.legit.model.ModePaiement modePaiement = null;
+        if (request.get("modePaiement") != null) {
+            try {
+                modePaiement = myavocat.legit.model.ModePaiement.valueOf((String) request.get("modePaiement"));
+            } catch (IllegalArgumentException e) {
+                // Log l'erreur mais continuer
+                System.out.println("Mode de paiement invalide : " + request.get("modePaiement"));
+            }
+        }
+
+        FactureDTO factureDTO = factureService.creerFacture(userId, clientId, dossierId, intitule,
+                montantHt, tvaApplicable, modePaiement);
         return ResponseEntity.ok(factureDTO);
     }
 
