@@ -136,4 +136,17 @@ public class FactureController {
             return new ApiResponse(false, "Erreur lors de la récupération des factures: " + e.getMessage(), null);
         }
     }
+
+    @GetMapping("/kpi")
+    public ResponseEntity<Map<String, Object>> getKpiFactures(@PathVariable UUID userId) {
+        Map<String, Object> kpiData = factureService.getKpiFactures(userId);
+        return ResponseEntity.ok(kpiData);
+    }
+
+    @GetMapping("/kpi/mensuel")
+    public ResponseEntity<Map<String, Object>> getKpiFacturesMensuelles(@PathVariable UUID userId) {
+        Map<String, Object> kpiData = factureService.getKpiFacturesMensuelles(userId);
+        return ResponseEntity.ok(kpiData);
+    }
+
 }

@@ -6,12 +6,16 @@ import myavocat.legit.model.StatutPaiement;
 import myavocat.legit.repository.ClientRepository;
 import myavocat.legit.repository.DossierRepository;
 import myavocat.legit.repository.FactureRepository;
+import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import myavocat.legit.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -44,7 +48,8 @@ public class FactureService {
         if (lastFacture != null) {
             try {
                 lastNum = Integer.parseInt(lastFacture.substring(lastFacture.lastIndexOf('-') + 1));
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
 
         return initials + "-" + currentYear + "-" + String.format("%03d", lastNum + 1);
@@ -166,6 +171,7 @@ public class FactureService {
                 "Total en Attente", totalEnAttente
         );
     }
+
     public void relancerFacturesImpayees(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
@@ -183,7 +189,8 @@ public class FactureService {
 
     /**
      * Récupérer toutes les factures associées à un dossier
-     * @param userId ID de l'utilisateur faisant la demande
+     *
+     * @param userId    ID de l'utilisateur faisant la demande
      * @param dossierId ID du dossier
      * @return Liste des factures du dossier
      */
@@ -213,4 +220,64 @@ public class FactureService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
+
+    public Map<String, Object> getKpiFactures(UUID userId) {
+        UUID officeId = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"))
+                .getOffice().getId();
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfMonth = now.with(TemporalAdjusters.firstDayOfMonth()).withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime startOfWeek = now.minusDays(now.getDayOfWeek().getValue() - 1).withHour(0).withMinute(0).withSecond(0);
+
+        List<Facture> allFactures = factureRepository.findAllByOffice(officeId);
+        List<Facture> facturesDuMois = allFactures.stream().filter(f -> f.getDateEmission().isAfter(startOfMonth)).collect(Collectors.toList());
+        List<Facture> facturesDeLaSemaine = allFactures.stream().filter(f -> f.getDateEmission().isAfter(startOfWeek)).collect(Collectors.toList());
+        List<Facture> facturesEnAttente = allFactures.stream().filter(f -> f.getStatutPaiement() == StatutPaiement.ATTENTE_REGLEMENT).collect(Collectors.toList());
+
+        BigDecimal totalFacturesMois = facturesDuMois.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalFacturesSemaine = facturesDeLaSemaine.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalPaiementsEnAttente = facturesEnAttente.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long nombreFacturesMois = facturesDuMois.size();
+        long nombreFacturesPayeesMois = facturesDuMois.stream().filter(f -> f.getStatutPaiement() == StatutPaiement.REGLEE).count();
+        long nombreFacturesEnAttenteMois = facturesDuMois.stream().filter(f -> f.getStatutPaiement() == StatutPaiement.ATTENTE_REGLEMENT).count();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalFacturesMois", totalFacturesMois);
+        result.put("totalFacturesSemaine", totalFacturesSemaine);
+        result.put("totalPaiementsEnAttente", totalPaiementsEnAttente);
+        result.put("nombreFacturesMois", nombreFacturesMois);
+        result.put("nombreFacturesPayeesMois", nombreFacturesPayeesMois);
+        result.put("nombreFacturesEnAttenteMois", nombreFacturesEnAttenteMois);
+
+        return result;
+    }
+
+    public Map<String, Object> getKpiFacturesMensuelles(UUID userId) {
+        UUID officeId = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"))
+                .getOffice().getId();
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfMonth = now.with(TemporalAdjusters.firstDayOfMonth()).withHour(0).withMinute(0).withSecond(0);
+
+        List<Facture> facturesDuMois = factureRepository.findAllByOffice(officeId).stream()
+                .filter(f -> f.getDateEmission().isAfter(startOfMonth))
+                .collect(Collectors.toList());
+
+        BigDecimal totalFacturesMois = facturesDuMois.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalFacturesRegleesMois = facturesDuMois.stream()
+                .filter(f -> f.getStatutPaiement() == StatutPaiement.REGLEE)
+                .map(Facture::getMontantTtc)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalFacturesImpayeesMois = totalFacturesMois.subtract(totalFacturesRegleesMois);
+
+        return Map.of(
+                "totalFacturesMois", totalFacturesMois,
+                "totalFacturesRegleesMois", totalFacturesRegleesMois,
+                "totalFacturesImpayeesMois", totalFacturesImpayeesMois
+        );
+    }
+
 }
+
