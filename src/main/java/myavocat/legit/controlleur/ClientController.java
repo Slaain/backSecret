@@ -55,4 +55,14 @@ public class ClientController {
             return new ApiResponse(false, "Erreur lors de la suppression: " + e.getMessage());
         }
     }
+
+    @PutMapping("/{userId}/{clientId}")
+    public ApiResponse updateClient(@PathVariable UUID clientId, @RequestBody ClientDTO clientDTO) {
+        try {
+            ClientDTO updatedClient = clientService.updateClient(clientId, clientDTO);
+            return new ApiResponse(true, "Client mis à jour avec succès", updatedClient);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur lors de la mise à jour du client: " + e.getMessage());
+        }
+    }
 }

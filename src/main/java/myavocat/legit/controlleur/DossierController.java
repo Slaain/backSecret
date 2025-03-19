@@ -1,5 +1,6 @@
 package myavocat.legit.controller;
 
+import myavocat.legit.dto.DossierDTO;
 import myavocat.legit.model.Dossier;
 import myavocat.legit.response.ApiResponse;
 import myavocat.legit.service.DossierService;
@@ -66,39 +67,25 @@ public class DossierController {
     /**
      * Récupérer tous les dossiers accessibles par un utilisateur
      */
+
+    /**
+     * Récupérer tous les dossiers accessibles par un utilisateur
+     */
     @GetMapping("/{userId}")
     public ApiResponse getAllDossiers(@PathVariable UUID userId) {
         try {
             List<Dossier> dossiers = dossierService.getAllDossiers(userId);
 
-            // Transformer les dossiers en une liste d'objets JSON enrichis
-            List<Map<String, Object>> dossiersResponse = dossiers.stream().map(dossier -> {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", dossier.getId());
-                map.put("reference", dossier.getReference());
-                map.put("nomDossier", dossier.getNomDossier());
-                map.put("typeAffaire", dossier.getTypeAffaire());
-                map.put("statut", dossier.getStatut());
-                map.put("qualiteProcedurale", dossier.getQualiteProcedurale());
-                map.put("createdAt", dossier.getCreatedAt());
+            // Convertir les dossiers en DTO
+            List<DossierDTO> dossierDTOs = dossiers.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
 
-                // ✅ Inclure l'ID de l'adversaire en plus de l'objet complet
-                map.put("adversaire", dossier.getAdversaire());
-                map.put("adversaireId", dossier.getAdversaire() != null ? dossier.getAdversaire().getId() : null);
-
-                // ✅ Inclure l'ID du client (si applicable)
-                map.put("client", dossier.getClient());
-                map.put("clientId", dossier.getClient() != null ? dossier.getClient().getId() : null);
-
-                return map;
-            }).collect(Collectors.toList());
-
-            return new ApiResponse(true, "Dossiers récupérés", dossiersResponse);
+            return new ApiResponse(true, "Dossiers récupérés", dossierDTOs);
         } catch (Exception e) {
             return new ApiResponse(false, "Erreur lors de la récupération des dossiers: " + e.getMessage(), null);
         }
     }
-
 
     /**
      * Récupérer un dossier spécifique, si l'utilisateur y a accès
@@ -107,14 +94,69 @@ public class DossierController {
     public ApiResponse getDossierById(@PathVariable UUID userId, @PathVariable UUID dossierId) {
         try {
             Dossier dossier = dossierService.getDossierById(dossierId, userId);
-            return new ApiResponse(true, "Dossier trouvé", dossier);
+            DossierDTO dossierDTO = convertToDTO(dossier);
+            return new ApiResponse(true, "Dossier trouvé", dossierDTO);
         } catch (RuntimeException e) {
             return new ApiResponse(false, e.getMessage(), null);
         } catch (Exception e) {
             return new ApiResponse(false, "Erreur inattendue: " + e.getMessage(), null);
         }
     }
+    // Méthode privée pour convertir un Dossier en DossierDTO
+    private DossierDTO convertToDTO(Dossier dossier) {
+        DossierDTO dto = new DossierDTO();
 
+        // Informations de base
+        dto.setId(dossier.getId());
+        dto.setReference(dossier.getReference());
+        dto.setNomDossier(dossier.getNomDossier());
+        dto.setTypeAffaire(dossier.getTypeAffaire());
+        dto.setStatut(dossier.getStatut());
+        dto.setQualiteProcedurale(dossier.getQualiteProcedurale());
+        dto.setContentieux(dossier.getContentieux());
+        dto.setCreatedAt(dossier.getCreatedAt());
+
+        // IDs des entités associées
+        dto.setOfficeId(dossier.getOffice().getId());
+
+        // Conversion du client si présent
+        if (dossier.getClient() != null) {
+            DossierDTO.PersonneSimpleDTO clientDTO = new DossierDTO.PersonneSimpleDTO();
+            clientDTO.setId(dossier.getClient().getId());
+            clientDTO.setNom(dossier.getClient().getNom());
+            clientDTO.setPrenom(dossier.getClient().getPrenom());
+            clientDTO.setEmail(dossier.getClient().getEmail());
+
+            dto.setClient(clientDTO);
+            dto.setClientId(dossier.getClient().getId());
+        }
+
+        // Conversion de l'adversaire si présent
+        if (dossier.getAdversaire() != null) {
+            DossierDTO.PersonneSimpleDTO adversaireDTO = new DossierDTO.PersonneSimpleDTO();
+            adversaireDTO.setId(dossier.getAdversaire().getId());
+            adversaireDTO.setNom(dossier.getAdversaire().getNom());
+            adversaireDTO.setPrenom(dossier.getAdversaire().getPrenom());
+            adversaireDTO.setEmail(dossier.getAdversaire().getEmail());
+
+            dto.setAdversaire(adversaireDTO);
+            dto.setAdversaireId(dossier.getAdversaire().getId());
+        }
+
+        // Conversion de l'avocat si présent
+        if (dossier.getAvocat() != null) {
+            DossierDTO.PersonneSimpleDTO avocatDTO = new DossierDTO.PersonneSimpleDTO();
+            avocatDTO.setId(dossier.getAvocat().getId());
+            avocatDTO.setNom(dossier.getAvocat().getNom());
+            avocatDTO.setPrenom(dossier.getAvocat().getPrenom());
+            avocatDTO.setEmail(dossier.getAvocat().getEmail());
+
+            dto.setAvocat(avocatDTO);
+            dto.setAvocatId(dossier.getAvocat().getId());
+        }
+
+        return dto;
+    }
     /**
      * Récupérer tous les dossiers d'un client spécifique, si l'utilisateur y a accès
      */

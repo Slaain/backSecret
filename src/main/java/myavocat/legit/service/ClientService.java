@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -133,5 +134,31 @@ public class ClientService {
         dto.setCommune(client.getCommune());
         dto.setOfficeId(client.getOffice().getId()); // ✅ Retourne l'ID du cabinet
         return dto;
+    }
+
+    @Transactional
+    public ClientDTO updateClient(UUID clientId, ClientDTO clientDTO) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new RuntimeException("Client non trouvé"));
+
+        // Vérifier si l'email existe déjà et appartient à un autre client
+        if (clientDTO.getEmail() != null && !clientDTO.getEmail().isEmpty() && !clientDTO.getEmail().equals(client.getEmail())) {
+            Optional<Client> existingClient = clientRepository.findByEmail(clientDTO.getEmail());
+            if (existingClient.isPresent() && !existingClient.get().getId().equals(clientId)) {
+                throw new RuntimeException("Un client avec cet email existe déjà.");
+            }
+        }
+
+        // Mettre à jour les données du client
+        client.setNom(clientDTO.getNom());
+        client.setPrenom(clientDTO.getPrenom());
+        client.setEmail(clientDTO.getEmail());
+        client.setTelephone(clientDTO.getTelephone());
+        client.setType(clientDTO.getType());
+        client.setQualite(clientDTO.getQualite());
+        client.setCommune(clientDTO.getCommune());
+
+        Client updatedClient = clientRepository.save(client);
+        return convertToDTO(updatedClient);
     }
 }

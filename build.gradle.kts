@@ -36,6 +36,14 @@ dependencies {
 	//Mail
 	implementation ("org.springframework.boot:spring-boot-starter-mail")
 	implementation ("com.itextpdf:itext7-core:7.2.5")
+	implementation("com.itextpdf:kernel:7.2.5")
+	implementation("com.itextpdf:layout:7.2.5")
+	implementation("com.itextpdf:io:7.2.5")
+	implementation("com.itextpdf:forms:7.2.5")
+
+	// Supprimez ces lignes problématiques :
+	// implementation ("com.itextpdf:itext7-core:7.2.5")
+	// implementation("implementation 'com.itextpdf:itext7-core:7.2.4'")
 
 	// JWT
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
