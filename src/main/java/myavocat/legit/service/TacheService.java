@@ -5,6 +5,12 @@ import myavocat.legit.model.User;
 import myavocat.legit.repository.TacheRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import myavocat.legit.dto.TacheDTO;
+import myavocat.legit.model.Dossier;
+import myavocat.legit.model.Tache;
+import myavocat.legit.model.User;
+import myavocat.legit.repository.DossierRepository;
+
 
 import java.util.List;
 import java.util.Optional;
@@ -77,4 +83,9 @@ public class TacheService {
     public List<Tache> findByUserId(UUID userId) {
         return tacheRepository.findByUserId(userId);
     }
+
+    public Tache save(Tache tache) {
+        return tacheRepository.save(tache);
+    }
+
 }
