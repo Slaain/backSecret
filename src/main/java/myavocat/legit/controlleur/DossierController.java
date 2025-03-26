@@ -6,6 +6,7 @@ import myavocat.legit.response.ApiResponse;
 import myavocat.legit.service.DossierService;
 import myavocat.legit.service.AdversaireService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -75,6 +76,15 @@ public class DossierController {
     public ApiResponse getAllDossiers(@PathVariable UUID userId) {
         try {
             List<Dossier> dossiers = dossierService.getAllDossiers(userId);
+
+            // Trier les dossiers par date de création (du plus récent au plus ancien)
+            dossiers.sort((dossier1, dossier2) -> {
+                // Si une des dates est null, la placer à la fin
+                if (dossier1.getCreatedAt() == null) return 1;
+                if (dossier2.getCreatedAt() == null) return -1;
+                // Sinon, trier par ordre décroissant (plus récent d'abord)
+                return dossier2.getCreatedAt().compareTo(dossier1.getCreatedAt());
+            });
 
             // Convertir les dossiers en DTO
             List<DossierDTO> dossierDTOs = dossiers.stream()
@@ -278,6 +288,16 @@ public class DossierController {
             return new ApiResponse(true, "Avocat principal assigné au dossier avec succès", updatedDossier);
         } catch (RuntimeException e) {
             return new ApiResponse(false, e.getMessage(), null);
+        }
+    }
+
+    @GetMapping("/{userId}/kpi")
+    public ResponseEntity<ApiResponse> getKpiDossiers(@PathVariable UUID userId) {
+        try {
+            Map<String, Object> kpiData = dossierService.getKpiDossiers(userId);
+            return ResponseEntity.ok(new ApiResponse(true, "KPI des dossiers récupérés", kpiData));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse(false, "Erreur lors de la récupération des KPI : " + e.getMessage(), null));
         }
     }
 
