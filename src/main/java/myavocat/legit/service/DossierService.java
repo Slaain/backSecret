@@ -14,7 +14,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -184,6 +189,62 @@ public class DossierService {
         return clientRepository.findByOfficeId(officeId);
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, Object> getKpiDossiers(UUID userId) {
+        UUID officeId = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"))
+                .getOffice().getId();
 
+        List<Dossier> allDossiers = dossierRepository.findAll().stream()
+                .filter(dossier -> dossier.getOffice().getId().equals(officeId))
+                .collect(Collectors.toList());
 
+        long totalDossiers = allDossiers.size();
+        long dossiersEnCours = allDossiers.stream().filter(d -> "En cours".equals(d.getStatut())).count();
+        long dossiersEnAttente = allDossiers.stream().filter(d -> "En attente".equals(d.getStatut())).count();
+        long dossiersTermines = allDossiers.stream().filter(d -> "Fini".equals(d.getStatut())).count();
+
+        // **Filtres temporels**
+        LocalDateTime debutJour = LocalDate.now().atStartOfDay();
+        LocalDateTime debutSemaine = LocalDate.now().with(java.time.DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime debutMois = LocalDate.now().with(TemporalAdjusters.firstDayOfMonth()).atStartOfDay();
+        LocalDateTime debutAnnee = LocalDate.now().with(TemporalAdjusters.firstDayOfYear()).atStartOfDay();
+
+        long dossiersAujourdHui = allDossiers.stream().filter(d -> d.getCreatedAt().isAfter(debutJour)).count();
+        long dossiersCetteSemaine = allDossiers.stream().filter(d -> d.getCreatedAt().isAfter(debutSemaine)).count();
+        long dossiersCeMois = allDossiers.stream().filter(d -> d.getCreatedAt().isAfter(debutMois)).count();
+        long dossiersCetteAnnee = allDossiers.stream().filter(d -> d.getCreatedAt().isAfter(debutAnnee)).count();
+
+        // **5 derniers dossiers créés**
+        List<Map<String, Object>> derniersDossiers = allDossiers.stream()
+                .sorted((d1, d2) -> d2.getCreatedAt().compareTo(d1.getCreatedAt()))
+                .limit(5)
+                .map(dossier -> {
+                    Map<String, Object> dossierMap = new HashMap<>();
+                    dossierMap.put("id", dossier.getId());
+                    dossierMap.put("reference", dossier.getReference());
+                    dossierMap.put("nomDossier", dossier.getNomDossier());
+                    dossierMap.put("typeAffaire", dossier.getTypeAffaire());
+                    dossierMap.put("statut", dossier.getStatut());
+                    dossierMap.put("createdAt", dossier.getCreatedAt());
+                    return dossierMap;
+                })
+                .collect(Collectors.toList());
+
+        // **Construction de la réponse**
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalDossiers", totalDossiers);
+        result.put("dossiersEnCours", dossiersEnCours);
+        result.put("dossiersEnAttente", dossiersEnAttente);
+        result.put("dossiersTermines", dossiersTermines);
+        result.put("dossiersAujourdHui", dossiersAujourdHui);
+        result.put("dossiersCetteSemaine", dossiersCetteSemaine);
+        result.put("dossiersCeMois", dossiersCeMois);
+        result.put("dossiersCetteAnnee", dossiersCetteAnnee);
+        result.put("derniersDossiers", derniersDossiers);
+
+        return result;
+    }
 }
+
+
