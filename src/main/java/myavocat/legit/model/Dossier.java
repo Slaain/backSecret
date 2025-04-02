@@ -1,6 +1,8 @@
 package myavocat.legit.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,8 +15,9 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Dossier {
-
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
@@ -33,22 +36,18 @@ public class Dossier {
 
     @ManyToOne
     @JoinColumn(name = "avocat_id", nullable = false)
-    @JsonIgnoreProperties("dossiers")
     private User avocat;
 
     @ManyToOne
-    @JoinColumn(name = "client_id", nullable = true)
-    @JsonIgnoreProperties("dossiers")
+    @JoinColumn(name = "client_id")
     private Client client;
 
     @ManyToOne
-    @JoinColumn(name = "adversaire_id", nullable = true)
-    @JsonIgnoreProperties("dossiers")
+    @JoinColumn(name = "adversaire_id")
     private Adversaire adversaire;
 
     @ManyToOne
     @JoinColumn(name = "office_id", nullable = false)
-    @JsonIgnoreProperties("dossiers")
     private Office office;
 
     @Column(nullable = false)
@@ -64,29 +63,10 @@ public class Dossier {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
-    // Ces champs sont utilisés uniquement pour le transfert des données, pas pour le stockage
-    @Transient // Cette annotation indique qu'ils ne sont pas persistés en base de données
+
+    @Transient
     private UUID clientId;
 
     @Transient
     private UUID adversaireId;
-
-    // Getters et setters
-    public UUID getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(UUID clientId) {
-        this.clientId = clientId;
-    }
-
-    public UUID getAdversaireId() {
-        return adversaireId;
-    }
-
-    public void setAdversaireId(UUID adversaireId) {
-        this.adversaireId = adversaireId;
-    }
-
-
 }
