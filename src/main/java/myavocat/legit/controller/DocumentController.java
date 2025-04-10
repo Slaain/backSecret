@@ -60,18 +60,43 @@ public class DocumentController {
 
     @GetMapping("/{documentId}/download")
     public ResponseEntity<?> downloadDocument(@PathVariable UUID documentId) {
-        Document document = documentService.getDocumentById(documentId);
-        Path path = Paths.get(document.getCheminFichier());
+        try {
+            Document document = documentService.getDocumentById(documentId);
+            System.out.println("Document trouvé: " + document.getNomFichier());
 
-        if (!Files.exists(path)) {
-            return ResponseEntity.notFound().build();
+            // Le problème est ici - le chemin stocké en BDD est juste "uploads/..."
+            // alors que le chemin réel dans le conteneur est "/app/uploads/..."
+            String cheminOriginal = document.getCheminFichier();
+            System.out.println("Chemin stocké en BDD: " + cheminOriginal);
+
+            // Si le chemin ne commence pas par "/app/" et qu'il commence par "uploads/"
+            Path path;
+            if (cheminOriginal.startsWith("uploads/") && !cheminOriginal.startsWith("/app/")) {
+                // Nous devons remplacer "uploads/" par "/app/uploads/"
+                path = Paths.get("/app/" + cheminOriginal);
+            } else {
+                // Sinon, utiliser le chemin tel quel
+                path = Paths.get(cheminOriginal);
+            }
+
+            System.out.println("Chemin final utilisé: " + path.toAbsolutePath());
+
+            if (!Files.exists(path)) {
+                System.out.println("Fichier non trouvé: " + path.toAbsolutePath());
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource fileResource = new FileSystemResource(path.toFile());
+            System.out.println("Fichier trouvé et prêt pour téléchargement");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + document.getNomFichier() + "\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(fileResource);
+        } catch (Exception e) {
+            System.err.println("Erreur lors du téléchargement: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Erreur lors du téléchargement: " + e.getMessage());
         }
-
-        Resource fileResource = new FileSystemResource(path.toFile());
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + document.getNomFichier() + "\"")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(fileResource);
     }
 }

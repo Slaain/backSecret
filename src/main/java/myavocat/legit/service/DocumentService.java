@@ -25,13 +25,22 @@ public class DocumentService {
     private final DossierRepository dossierRepository;
     private final UserRepository userRepository;
 
-    private final String uploadDir = "uploads/";
+    // Utiliser un chemin absolu qui correspond au volume Docker
+    private final String uploadDir = "/app/uploads/";
 
     @Autowired
     public DocumentService(DocumentRepository documentRepository, DossierRepository dossierRepository, UserRepository userRepository) {
         this.documentRepository = documentRepository;
         this.dossierRepository = dossierRepository;
         this.userRepository = userRepository;
+
+        // Créer le répertoire de base s'il n'existe pas
+        try {
+            Files.createDirectories(Paths.get(uploadDir));
+            System.out.println("✅ Répertoire d'upload initialisé: " + uploadDir);
+        } catch (IOException e) {
+            System.err.println("⚠️ Impossible de créer le répertoire d'upload: " + e.getMessage());
+        }
     }
 
     public Document uploadDocument(MultipartFile file, UUID dossierId, UUID userId, String typeFichier, String description) throws IOException {
@@ -53,9 +62,16 @@ public class DocumentService {
         String originalFilename = file.getOriginalFilename();
         String uniqueFilename = UUID.randomUUID() + "_" + originalFilename;
 
-        Path filePath = Paths.get(uploadDir + dossierId + "/" + uniqueFilename);
+        // Chemin absolu pour stocker les fichiers
+        Path filePath = Paths.get(uploadDir, dossierId.toString(), uniqueFilename);
+        System.out.println("📂 Chemin de fichier: " + filePath.toAbsolutePath());
+
+        // Création des répertoires nécessaires
         Files.createDirectories(filePath.getParent());
+
+        // Copie du fichier
         Files.copy(file.getInputStream(), filePath);
+        System.out.println("✅ Fichier enregistré: " + filePath);
 
         Document document = new Document();
         document.setNomFichier(originalFilename);
@@ -75,9 +91,18 @@ public class DocumentService {
     public List<Document> getDocumentsByUser(UUID userId) {
         return documentRepository.findByUploadedById(userId);
     }
-    public Document getDocumentById(UUID id) {
-        return documentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Document non trouvé"));
-    }
 
+    public Document getDocumentById(UUID id) {
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Document non trouvé"));
+
+        // Vérifier si le fichier existe
+        Path filePath = Paths.get(document.getCheminFichier());
+        if (!Files.exists(filePath)) {
+            System.out.println("⚠️ Le fichier n'existe pas: " + filePath);
+            // Vous pourriez décider de gérer cette situation différemment
+        }
+
+        return document;
+    }
 }
