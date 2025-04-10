@@ -20,6 +20,8 @@ services:
       - "8080:8080"
     depends_on:
       - db
+    volumes:
+      - uploads_data:/app/uploads  # Ajoutez cette ligne
     networks:
       - backend
 
@@ -36,6 +38,7 @@ services:
 
 volumes:
   pg_data:
+  uploads_data:  # Ajoutez cette ligne
 
 networks:
   backend:

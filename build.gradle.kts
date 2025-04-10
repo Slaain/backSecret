@@ -52,6 +52,7 @@ dependencies {
 
 	implementation("commons-io:commons-io:2.13.0")
 
+	implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
 
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
