@@ -2,6 +2,7 @@ package myavocat.legit.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -16,9 +17,14 @@ public class DossierDTO {
     private String contentieux;
     private LocalDateTime createdAt;
 
-    // Personnes associées (représentées avec des versions simplifiées)
+    // Personnes associées (ancienne version - compatibilité)
     private PersonneSimpleDTO client;
     private PersonneSimpleDTO adversaire;
+
+    // Nouvelle version - listes de parties prenantes
+    private List<PersonneSimpleDTO> clients;
+    private List<PersonneSimpleDTO> adversaires;
+
     private PersonneSimpleDTO avocat;
 
     // IDs pour les assignations

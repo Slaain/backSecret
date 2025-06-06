@@ -190,6 +190,11 @@ public class DossierService {
     }
 
     @Transactional(readOnly = true)
+    public List<Adversaire> getAdversaireByOffice(UUID officeId) {
+        return adversaireRepository.findByOfficeId(officeId);
+    }
+
+    @Transactional(readOnly = true)
     public Map<String, Object> getKpiDossiers(UUID userId) {
         UUID officeId = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"))
@@ -242,6 +247,177 @@ public class DossierService {
         result.put("dossiersCeMois", dossiersCeMois);
         result.put("dossiersCetteAnnee", dossiersCetteAnnee);
         result.put("derniersDossiers", derniersDossiers);
+
+        return result;
+    }
+
+// ================================
+// NOUVELLES MÉTHODES À AJOUTER DANS TON DossierService
+// ================================
+
+    /**
+     * Ajouter un client à la liste des parties prenantes d'un dossier
+     */
+    @Transactional
+    public Dossier addClientToDossier(UUID userId, UUID dossierId, UUID clientId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new RuntimeException("Client introuvable"));
+
+        // Vérification : l'utilisateur doit faire partie du même cabinet que le dossier
+        if (!user.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : vous ne pouvez pas modifier ce dossier.");
+        }
+
+        // Vérification : le client doit appartenir au même cabinet
+        if (!client.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : ce client appartient à un autre cabinet.");
+        }
+
+        // Ajouter le client à la liste (méthode utilitaire du modèle)
+        dossier.addClient(client);
+
+        return dossierRepository.save(dossier);
+    }
+
+    /**
+     * Retirer un client de la liste des parties prenantes d'un dossier
+     */
+    @Transactional
+    public Dossier removeClientFromDossier(UUID userId, UUID dossierId, UUID clientId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new RuntimeException("Client introuvable"));
+
+        // Vérification : l'utilisateur doit faire partie du même cabinet que le dossier
+        if (!user.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : vous ne pouvez pas modifier ce dossier.");
+        }
+
+        // Retirer le client de la liste (méthode utilitaire du modèle)
+        dossier.removeClient(client);
+
+        return dossierRepository.save(dossier);
+    }
+
+    /**
+     * Ajouter un adversaire à la liste des parties prenantes d'un dossier
+     */
+    @Transactional
+    public Dossier addAdversaireToDossier(UUID userId, UUID dossierId, UUID adversaireId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+        Adversaire adversaire = adversaireRepository.findById(adversaireId)
+                .orElseThrow(() -> new RuntimeException("Adversaire introuvable"));
+
+        // Vérification : l'utilisateur doit faire partie du même cabinet que le dossier
+        if (!user.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : vous ne pouvez pas modifier ce dossier.");
+        }
+
+        // Ajouter l'adversaire à la liste (méthode utilitaire du modèle)
+        dossier.addAdversaire(adversaire);
+
+        return dossierRepository.save(dossier);
+    }
+
+    /**
+     * Retirer un adversaire de la liste des parties prenantes d'un dossier
+     */
+    @Transactional
+    public Dossier removeAdversaireFromDossier(UUID userId, UUID dossierId, UUID adversaireId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+        Adversaire adversaire = adversaireRepository.findById(adversaireId)
+                .orElseThrow(() -> new RuntimeException("Adversaire introuvable"));
+
+        // Vérification : l'utilisateur doit faire partie du même cabinet que le dossier
+        if (!user.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : vous ne pouvez pas modifier ce dossier.");
+        }
+
+        // Retirer l'adversaire de la liste (méthode utilitaire du modèle)
+        dossier.removeAdversaire(adversaire);
+
+        return dossierRepository.save(dossier);
+    }
+
+    /**
+     * Récupérer toutes les parties prenantes d'un dossier
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getPartiesPrenantes(UUID userId, UUID dossierId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Dossier dossier = dossierRepository.findById(dossierId)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+        // Vérification : l'utilisateur doit faire partie du même cabinet que le dossier
+        if (!user.getOffice().getId().equals(dossier.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : vous ne pouvez pas consulter ce dossier.");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+
+        // Liste des clients
+        List<Map<String, Object>> clients = dossier.getClients().stream().map(client -> {
+            Map<String, Object> clientMap = new HashMap<>();
+            clientMap.put("id", client.getId());
+            clientMap.put("nom", client.getNom());
+            clientMap.put("prenom", client.getPrenom());
+            clientMap.put("email", client.getEmail());
+            clientMap.put("telephone", client.getTelephone());
+            clientMap.put("type", client.getType());
+            clientMap.put("qualite", client.getQualite());
+            return clientMap;
+        }).collect(Collectors.toList());
+
+        // Liste des adversaires
+        List<Map<String, Object>> adversaires = dossier.getAdversaires().stream().map(adversaire -> {
+            Map<String, Object> adversaireMap = new HashMap<>();
+            adversaireMap.put("id", adversaire.getId());
+            adversaireMap.put("nom", adversaire.getNom());
+            adversaireMap.put("prenom", adversaire.getPrenom());
+            adversaireMap.put("email", adversaire.getEmail());
+            adversaireMap.put("telephone", adversaire.getTelephone());
+            adversaireMap.put("type", adversaire.getType());
+            adversaireMap.put("qualite", adversaire.getQualite());
+            return adversaireMap;
+        }).collect(Collectors.toList());
+
+        // Avocat responsable
+        Map<String, Object> avocat = new HashMap<>();
+        if (dossier.getAvocat() != null) {
+            avocat.put("id", dossier.getAvocat().getId());
+            avocat.put("nom", dossier.getAvocat().getNom());
+            avocat.put("prenom", dossier.getAvocat().getPrenom());
+            avocat.put("email", dossier.getAvocat().getEmail());
+        }
+
+        result.put("clients", clients);
+        result.put("adversaires", adversaires);
+        result.put("avocat", avocat);
+        result.put("totalClients", clients.size());
+        result.put("totalAdversaires", adversaires.size());
 
         return result;
     }
