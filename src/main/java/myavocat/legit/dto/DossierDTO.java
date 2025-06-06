@@ -1,6 +1,9 @@
 package myavocat.legit.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -12,6 +15,8 @@ public class DossierDTO {
     private String reference;
     private String nomDossier;
     private String typeAffaire;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dateContentieux;
     private String statut;
     private String qualiteProcedurale;
     private String contentieux;

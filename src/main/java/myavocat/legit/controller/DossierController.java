@@ -122,6 +122,7 @@ public class DossierController {
         dto.setReference(dossier.getReference());
         dto.setNomDossier(dossier.getNomDossier());
         dto.setTypeAffaire(dossier.getTypeAffaire());
+        dto.setDateContentieux(dossier.getDateContentieux());
         dto.setStatut(dossier.getStatut());
         dto.setQualiteProcedurale(dossier.getQualiteProcedurale());
         dto.setContentieux(dossier.getContentieux());
