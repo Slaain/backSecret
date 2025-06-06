@@ -27,6 +27,7 @@ public class DossierController {
     private AdversaireService adversaireService;
 
 
+
     /**
      * Créer un nouveau dossier dans un cabinet donné
      */
@@ -125,48 +126,70 @@ public class DossierController {
         dto.setQualiteProcedurale(dossier.getQualiteProcedurale());
         dto.setContentieux(dossier.getContentieux());
         dto.setCreatedAt(dossier.getCreatedAt());
-
-        // IDs des entités associées
         dto.setOfficeId(dossier.getOffice().getId());
 
-        // Conversion du client si présent
+        // Client principal (ancienne version pour compatibilité)
         if (dossier.getClient() != null) {
             DossierDTO.PersonneSimpleDTO clientDTO = new DossierDTO.PersonneSimpleDTO();
             clientDTO.setId(dossier.getClient().getId());
             clientDTO.setNom(dossier.getClient().getNom());
             clientDTO.setPrenom(dossier.getClient().getPrenom());
             clientDTO.setEmail(dossier.getClient().getEmail());
-
             dto.setClient(clientDTO);
             dto.setClientId(dossier.getClient().getId());
         }
 
-        // Conversion de l'adversaire si présent
+        // Adversaire principal (ancienne version pour compatibilité)
         if (dossier.getAdversaire() != null) {
             DossierDTO.PersonneSimpleDTO adversaireDTO = new DossierDTO.PersonneSimpleDTO();
             adversaireDTO.setId(dossier.getAdversaire().getId());
             adversaireDTO.setNom(dossier.getAdversaire().getNom());
             adversaireDTO.setPrenom(dossier.getAdversaire().getPrenom());
             adversaireDTO.setEmail(dossier.getAdversaire().getEmail());
-
             dto.setAdversaire(adversaireDTO);
             dto.setAdversaireId(dossier.getAdversaire().getId());
         }
 
-        // Conversion de l'avocat si présent
+        // Avocat
         if (dossier.getAvocat() != null) {
             DossierDTO.PersonneSimpleDTO avocatDTO = new DossierDTO.PersonneSimpleDTO();
             avocatDTO.setId(dossier.getAvocat().getId());
             avocatDTO.setNom(dossier.getAvocat().getNom());
             avocatDTO.setPrenom(dossier.getAvocat().getPrenom());
             avocatDTO.setEmail(dossier.getAvocat().getEmail());
-
             dto.setAvocat(avocatDTO);
             dto.setAvocatId(dossier.getAvocat().getId());
         }
 
+        // ✅ Liste des clients
+        if (dossier.getClients() != null && !dossier.getClients().isEmpty()) {
+            List<DossierDTO.PersonneSimpleDTO> clientsDTO = dossier.getClients().stream().map(client -> {
+                DossierDTO.PersonneSimpleDTO dtoClient = new DossierDTO.PersonneSimpleDTO();
+                dtoClient.setId(client.getId());
+                dtoClient.setNom(client.getNom());
+                dtoClient.setPrenom(client.getPrenom());
+                dtoClient.setEmail(client.getEmail());
+                return dtoClient;
+            }).collect(Collectors.toList());
+            dto.setClients(clientsDTO);
+        }
+
+        // ✅ Liste des adversaires
+        if (dossier.getAdversaires() != null && !dossier.getAdversaires().isEmpty()) {
+            List<DossierDTO.PersonneSimpleDTO> adversairesDTO = dossier.getAdversaires().stream().map(adv -> {
+                DossierDTO.PersonneSimpleDTO dtoAdv = new DossierDTO.PersonneSimpleDTO();
+                dtoAdv.setId(adv.getId());
+                dtoAdv.setNom(adv.getNom());
+                dtoAdv.setPrenom(adv.getPrenom());
+                dtoAdv.setEmail(adv.getEmail());
+                return dtoAdv;
+            }).collect(Collectors.toList());
+            dto.setAdversaires(adversairesDTO);
+        }
+
         return dto;
     }
+
     /**
      * Récupérer tous les dossiers d'un client spécifique, si l'utilisateur y a accès
      */
@@ -300,5 +323,80 @@ public class DossierController {
             return ResponseEntity.badRequest().body(new ApiResponse(false, "Erreur lors de la récupération des KPI : " + e.getMessage(), null));
         }
     }
+    /**
+     * Ajouter un client à la liste des parties prenantes d'un dossier
+     */
+    @PostMapping("/{userId}/{dossierId}/add-client/{clientId}")
+    public ApiResponse addClientToDossier(
+            @PathVariable UUID userId,
+            @PathVariable UUID dossierId,
+            @PathVariable UUID clientId) {
+        try {
+            Dossier updatedDossier = dossierService.addClientToDossier(userId, dossierId, clientId);
+            return new ApiResponse(true, "Client ajouté aux parties prenantes avec succès", convertToDTO(updatedDossier));
+        } catch (RuntimeException e) {
+            return new ApiResponse(false, e.getMessage(), null);
+        }
+    }
 
+    /**
+     * Retirer un client de la liste des parties prenantes d'un dossier
+     */
+    @DeleteMapping("/{userId}/{dossierId}/remove-client/{clientId}")
+    public ApiResponse removeClientFromDossier(
+            @PathVariable UUID userId,
+            @PathVariable UUID dossierId,
+            @PathVariable UUID clientId) {
+        try {
+            Dossier updatedDossier = dossierService.removeClientFromDossier(userId, dossierId, clientId);
+            return new ApiResponse(true, "Client retiré des parties prenantes avec succès", convertToDTO(updatedDossier));
+        } catch (RuntimeException e) {
+            return new ApiResponse(false, e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Ajouter un adversaire à la liste des parties prenantes d'un dossier
+     */
+    @PostMapping("/{userId}/{dossierId}/add-adversaire/{adversaireId}")
+    public ApiResponse addAdversaireToDossier(
+            @PathVariable UUID userId,
+            @PathVariable UUID dossierId,
+            @PathVariable UUID adversaireId) {
+        try {
+            Dossier updatedDossier = dossierService.addAdversaireToDossier(userId, dossierId, adversaireId);
+            return new ApiResponse(true, "Adversaire ajouté aux parties prenantes avec succès", convertToDTO(updatedDossier));
+        } catch (RuntimeException e) {
+            return new ApiResponse(false, e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Retirer un adversaire de la liste des parties prenantes d'un dossier
+     */
+    @DeleteMapping("/{userId}/{dossierId}/remove-adversaire/{adversaireId}")
+    public ApiResponse removeAdversaireFromDossier(
+            @PathVariable UUID userId,
+            @PathVariable UUID dossierId,
+            @PathVariable UUID adversaireId) {
+        try {
+            Dossier updatedDossier = dossierService.removeAdversaireFromDossier(userId, dossierId, adversaireId);
+            return new ApiResponse(true, "Adversaire retiré des parties prenantes avec succès", convertToDTO(updatedDossier));
+        } catch (RuntimeException e) {
+            return new ApiResponse(false, e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Récupérer toutes les parties prenantes d'un dossier
+     */
+    @GetMapping("/{userId}/{dossierId}/parties-prenantes")
+    public ApiResponse getPartiesPrenantes(@PathVariable UUID userId, @PathVariable UUID dossierId) {
+        try {
+            Map<String, Object> partiesPrenantes = dossierService.getPartiesPrenantes(userId, dossierId);
+            return new ApiResponse(true, "Parties prenantes récupérées avec succès", partiesPrenantes);
+        } catch (RuntimeException e) {
+            return new ApiResponse(false, e.getMessage(), null);
+        }
+    }
 }

@@ -2,6 +2,7 @@ package myavocat.legit.controller;
 
 import jakarta.validation.Valid;
 import myavocat.legit.dto.OfficeDTO;
+import myavocat.legit.model.Adversaire;
 import myavocat.legit.model.Office;
 import myavocat.legit.model.User;
 import myavocat.legit.service.UserService;
@@ -144,6 +145,16 @@ public class OfficeController {
             return new ApiResponse(true, "Clients récupérés avec succès", clients);
         } catch (Exception e) {
             return new ApiResponse(false, "Erreur lors de la récupération des clients : " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{officeId}/adversaire")
+    public ApiResponse getAdversaireByOffice(@PathVariable UUID officeId) {
+        try {
+            List<Adversaire> adversaires = dossierService.getAdversaireByOffice(officeId);
+            return new ApiResponse(true, "Adversaires récupérés avec succès", adversaires);
+        } catch (Exception e) {
+            return new ApiResponse(false, "Erreur lors de la récupération des Adversaires : " + e.getMessage());
         }
     }
 
