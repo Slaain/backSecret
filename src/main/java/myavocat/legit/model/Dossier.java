@@ -1,5 +1,6 @@
 package myavocat.legit.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
@@ -7,7 +8,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -64,6 +68,10 @@ public class Dossier {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "contentieux_date")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dateContentieux;
 
     // ✅ NOUVEAUX CHAMPS POUR RELATIONS MULTIPLES
     // Relations Many-to-Many pour gérer plusieurs clients et adversaires
@@ -169,5 +177,10 @@ public class Dossier {
             return this.adversaires.get(0);
         }
         return null;
+    }
+
+    public String getDateContentieuxFormatted() {
+        return dateContentieux != null ?
+                dateContentieux.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null;
     }
 }
