@@ -5,5 +5,5 @@ public enum ModePaiement {
     VIREMENT,
     CHEQUE,
     ESPECES,
-    AUTRES
+    AUTRES,
 }

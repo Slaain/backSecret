@@ -89,6 +89,64 @@ public class FactureController {
         return ResponseEntity.ok(updatedFacture);
     }
 
+    // 🔥 NOUVEAU ENDPOINT : Modifier le montant réclamé d'une facture
+    @PutMapping("/{id}/montant-reclame")
+    public ResponseEntity<ApiResponse> updateMontantReclame(
+            @PathVariable UUID userId,
+            @PathVariable UUID id,
+            @RequestBody Map<String, Object> request) {
+        try {
+            BigDecimal nouveauMontantReclame = new BigDecimal(request.get("montantReclame").toString());
+
+            FactureDTO updatedFacture = factureService.updateMontantReclame(userId, id, nouveauMontantReclame);
+
+            return ResponseEntity.ok(new ApiResponse(true, "Montant réclamé mis à jour avec succès", updatedFacture));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(false, "Erreur lors de la mise à jour du montant : " + e.getMessage(), null));
+        }
+    }
+
+    // 🔥 NOUVEAU ENDPOINT : Recalculer le statut de paiement (utile après ajout de paiements)
+    @PostMapping("/{id}/recalculer-statut")
+    public ResponseEntity<ApiResponse> recalculerStatutPaiement(
+            @PathVariable UUID userId,
+            @PathVariable UUID id) {
+        try {
+            FactureDTO factureDTO = factureService.recalculerStatutPaiement(id);
+
+            return ResponseEntity.ok(new ApiResponse(true, "Statut de paiement recalculé avec succès", factureDTO));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(false, "Erreur lors du recalcul : " + e.getMessage(), null));
+        }
+    }
+
+    // 🔥 NOUVEAU ENDPOINT : Obtenir le détail des montants d'une facture
+    @GetMapping("/{id}/detail-paiements")
+    public ResponseEntity<ApiResponse> getDetailPaiements(
+            @PathVariable UUID userId,
+            @PathVariable UUID id) {
+        try {
+            FactureDTO facture = factureService.getFactureById(userId, id);
+
+            Map<String, Object> details = Map.of(
+                    "montantReclame", facture.getMontantReclame(),
+                    "montantRegleTtc", facture.getMontantRegleTtc(),
+                    "montantRestantDu", facture.getMontantRestantDu(),
+                    "pourcentagePaiement", facture.getPourcentagePaiement(),
+                    "statutAffichage", facture.getStatutAffichage(),
+                    "isPayee", facture.isPayee(),
+                    "isPartiellementPayee", facture.isPartiellementPayee()
+            );
+
+            return ResponseEntity.ok(new ApiResponse(true, "Détails des paiements récupérés", details));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(false, "Erreur lors de la récupération : " + e.getMessage(), null));
+        }
+    }
+
     /**
      * ✅ Calculer les statistiques des factures (Total édité, payé, en attente)
      * Seul un utilisateur du même office peut voir les statistiques.
@@ -123,6 +181,7 @@ public class FactureController {
                 .headers(headers)
                 .body(pdfBytes);
     }
+
     /**
      * Récupérer toutes les factures associées à un dossier spécifique
      */
@@ -148,5 +207,4 @@ public class FactureController {
         Map<String, Object> kpiData = factureService.getKpiFacturesMensuelles(userId);
         return ResponseEntity.ok(kpiData);
     }
-
 }

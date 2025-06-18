@@ -55,7 +55,6 @@ public class FactureService {
         return initials + "-" + currentYear + "-" + String.format("%03d", lastNum + 1);
     }
 
-
     @Transactional
     public FactureDTO creerFacture(UUID userId, UUID clientId, UUID dossierId, String intitule,
                                    BigDecimal montantHt, boolean tvaApplicable, myavocat.legit.model.ModePaiement modePaiement) {
@@ -89,7 +88,45 @@ public class FactureService {
         facture.setTvaApplicable(tvaApplicable);
         facture.setStatutPaiement(StatutPaiement.ATTENTE_REGLEMENT);
         facture.setDateEmission(LocalDateTime.now());
-        facture.setModePaiement(modePaiement); // Ajoutez cette ligne
+        facture.setModePaiement(modePaiement);
+
+        // 🔥 NOUVEAU : Initialiser le montant réclamé
+        facture.setMontantReclame(montantTtc);
+
+        return convertToDTO(factureRepository.save(facture));
+    }
+
+    // 🔥 NOUVELLE MÉTHODE : Mettre à jour le montant réclamé
+    @Transactional
+    public FactureDTO updateMontantReclame(UUID userId, UUID factureId, BigDecimal nouveauMontantReclame) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+        Facture facture = factureRepository.findById(factureId)
+                .orElseThrow(() -> new RuntimeException("Facture non trouvée"));
+
+        // Vérifier l'accès
+        if (!facture.getDossier().getOffice().getId().equals(user.getOffice().getId())) {
+            throw new RuntimeException("Accès refusé : cette facture n'appartient pas à votre cabinet.");
+        }
+
+        // Mettre à jour le montant réclamé
+        facture.setMontantReclame(nouveauMontantReclame);
+
+        // Recalculer automatiquement le statut
+        facture.updateStatutPaiement();
+
+        return convertToDTO(factureRepository.save(facture));
+    }
+
+    // 🔥 NOUVELLE MÉTHODE : Recalculer le statut après ajout/suppression de paiements
+    @Transactional
+    public FactureDTO recalculerStatutPaiement(UUID factureId) {
+        Facture facture = factureRepository.findById(factureId)
+                .orElseThrow(() -> new RuntimeException("Facture non trouvée"));
+
+        // La méthode updateStatutPaiement() est dans le modèle Facture
+        facture.updateStatutPaiement();
 
         return convertToDTO(factureRepository.save(facture));
     }
@@ -131,6 +168,7 @@ public class FactureService {
         return convertToDTO(factureRepository.save(facture));
     }
 
+    // 🔥 MÉTHODE CONVERTTODT MISE À JOUR avec nouveaux champs
     private FactureDTO convertToDTO(Facture facture) {
         return new FactureDTO(
                 facture.getId(),
@@ -139,6 +177,9 @@ public class FactureService {
                 facture.getDateEmission(),
                 facture.getMontantHt(),
                 facture.getMontantTtc(),
+                facture.getMontantReclame(), // 🔥 NOUVEAU
+                facture.getMontantRegleTtc(), // 🔥 NOUVEAU (calculé)
+                facture.getMontantRestantDu(), // 🔥 NOUVEAU (calculé)
                 facture.getStatutPaiement(),
                 facture.getModePaiement(),
                 facture.getDossier().getReference(),
@@ -149,7 +190,6 @@ public class FactureService {
         );
     }
 
-
     public Map<String, BigDecimal> getStatistiquesFactures(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
@@ -158,12 +198,18 @@ public class FactureService {
 
         List<Facture> factures = factureRepository.findAllByOffice(officeId);
 
-        BigDecimal totalEmis = factures.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalRegle = factures.stream()
-                .filter(f -> f.getStatutPaiement() == StatutPaiement.REGLEE)
-                .map(Facture::getMontantTtc)
+        // 🔥 MISE À JOUR : Utiliser les nouveaux calculs
+        BigDecimal totalEmis = factures.stream()
+                .map(Facture::getMontantReclame)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalEnAttente = totalEmis.subtract(totalRegle);
+
+        BigDecimal totalRegle = factures.stream()
+                .map(Facture::getMontantRegleTtc)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalEnAttente = factures.stream()
+                .map(Facture::getMontantRestantDu)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return Map.of(
                 "Total Facturé", totalEmis,
@@ -186,35 +232,21 @@ public class FactureService {
         }
     }
 
-
-    /**
-     * Récupérer toutes les factures associées à un dossier
-     *
-     * @param userId    ID de l'utilisateur faisant la demande
-     * @param dossierId ID du dossier
-     * @return Liste des factures du dossier
-     */
     public List<FactureDTO> getFacturesByDossier(UUID userId, UUID dossierId) {
-        // Vérifier que l'utilisateur existe
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        // Vérifier l'appartenance au même cabinet
         UUID officeId = user.getOffice().getId();
 
-        // Récupérer les factures associées à ce dossier
         List<Facture> factures = factureRepository.findByDossierId(dossierId);
 
-        // Filtrer pour ne garder que les factures auxquelles l'utilisateur a accès
         List<Facture> accessibleFactures = factures.stream()
                 .filter(facture -> facture.getDossier().getOffice().getId().equals(officeId))
                 .collect(Collectors.toList());
 
-        // Convertir en DTOs
         return convertToFactureDTOList(accessibleFactures);
     }
 
-    // Méthode utilitaire pour convertir une liste de Factures en une liste de FactureDTOs
     private List<FactureDTO> convertToFactureDTOList(List<Facture> factures) {
         return factures.stream()
                 .map(this::convertToDTO)
@@ -235,12 +267,22 @@ public class FactureService {
         List<Facture> facturesDeLaSemaine = allFactures.stream().filter(f -> f.getDateEmission().isAfter(startOfWeek)).collect(Collectors.toList());
         List<Facture> facturesEnAttente = allFactures.stream().filter(f -> f.getStatutPaiement() == StatutPaiement.ATTENTE_REGLEMENT).collect(Collectors.toList());
 
-        BigDecimal totalFacturesMois = facturesDuMois.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalFacturesSemaine = facturesDeLaSemaine.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalPaiementsEnAttente = facturesEnAttente.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 🔥 MISE À JOUR : Utiliser montantReclame et montantRegleTtc
+        BigDecimal totalFacturesMois = facturesDuMois.stream()
+                .map(Facture::getMontantReclame)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalFacturesSemaine = facturesDeLaSemaine.stream()
+                .map(Facture::getMontantReclame)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalPaiementsEnAttente = facturesEnAttente.stream()
+                .map(Facture::getMontantRestantDu)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         long nombreFacturesMois = facturesDuMois.size();
-        long nombreFacturesPayeesMois = facturesDuMois.stream().filter(f -> f.getStatutPaiement() == StatutPaiement.REGLEE).count();
-        long nombreFacturesEnAttenteMois = facturesDuMois.stream().filter(f -> f.getStatutPaiement() == StatutPaiement.ATTENTE_REGLEMENT).count();
+        long nombreFacturesPayeesMois = facturesDuMois.stream().filter(Facture::isPayee).count();
+        long nombreFacturesEnAttenteMois = facturesDuMois.stream().filter(f -> f.getMontantRestantDu().compareTo(BigDecimal.ZERO) > 0).count();
 
         Map<String, Object> result = new HashMap<>();
         result.put("totalFacturesMois", totalFacturesMois);
@@ -265,12 +307,18 @@ public class FactureService {
                 .filter(f -> f.getDateEmission().isAfter(startOfMonth))
                 .collect(Collectors.toList());
 
-        BigDecimal totalFacturesMois = facturesDuMois.stream().map(Facture::getMontantTtc).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalFacturesRegleesMois = facturesDuMois.stream()
-                .filter(f -> f.getStatutPaiement() == StatutPaiement.REGLEE)
-                .map(Facture::getMontantTtc)
+        // 🔥 MISE À JOUR : Utiliser les nouveaux calculs
+        BigDecimal totalFacturesMois = facturesDuMois.stream()
+                .map(Facture::getMontantReclame)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalFacturesImpayeesMois = totalFacturesMois.subtract(totalFacturesRegleesMois);
+
+        BigDecimal totalFacturesRegleesMois = facturesDuMois.stream()
+                .map(Facture::getMontantRegleTtc)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalFacturesImpayeesMois = facturesDuMois.stream()
+                .map(Facture::getMontantRestantDu)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return Map.of(
                 "totalFacturesMois", totalFacturesMois,
@@ -278,6 +326,4 @@ public class FactureService {
                 "totalFacturesImpayeesMois", totalFacturesImpayeesMois
         );
     }
-
 }
-

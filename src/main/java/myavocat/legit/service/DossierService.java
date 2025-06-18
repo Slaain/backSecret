@@ -279,8 +279,16 @@ public class DossierService {
             throw new RuntimeException("Accès refusé : ce client appartient à un autre cabinet.");
         }
 
-        // Ajouter le client à la liste (méthode utilitaire du modèle)
+        // ✅ SYNCHRONISER LES DEUX SYSTÈMES :
+
+        // 1. Ajouter à la liste Many-to-Many (table dossier_clients)
         dossier.addClient(client);
+
+        // 2. ✅ NOUVEAU : Si c'est le premier client, le définir comme client principal
+        if (dossier.getClient() == null) {
+            dossier.setClient(client); // Met à jour client_id dans la table dossiers
+            System.out.println("✅ Client principal défini : " + client.getNom() + " " + client.getPrenom());
+        }
 
         return dossierRepository.save(dossier);
     }
