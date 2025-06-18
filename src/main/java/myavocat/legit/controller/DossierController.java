@@ -202,8 +202,13 @@ public class DossierController {
 
             // Filtrez pour ne garder que les dossiers du client spécifié
             List<Dossier> clientDossiers = allDossiers.stream()
-                    .filter(dossier -> dossier.getClient() != null
-                            && dossier.getClient().getId().equals(clientId))
+                    .filter(dossier ->
+                            // Client principal (relation directe)
+                            (dossier.getClient() != null && dossier.getClient().getId().equals(clientId)) ||
+                                    // OU dans la liste des clients (relation Many-to-Many)
+                                    (dossier.getClients() != null && dossier.getClients().stream()
+                                            .anyMatch(client -> client.getId().equals(clientId)))
+                    )
                     .collect(Collectors.toList());
 
             // Transformation en réponse JSON (comme dans la méthode getAllDossiers)
