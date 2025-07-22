@@ -1,5 +1,6 @@
 package myavocat.legit.controller;
 
+import myavocat.legit.dto.EventDTO;
 import myavocat.legit.model.Event;
 import myavocat.legit.service.EventService;
 import myavocat.legit.response.ApiResponse;
@@ -33,9 +34,9 @@ public class EventController {
     ) {
         try {
             // Vérifier les conflits avant création
-            List<Event> conflicts = eventService.checkConflicts(createdBy, event.getStart(), event.getEndTime());
+            List<EventDTO> conflicts = eventService.checkConflicts(createdBy, event.getStart(), event.getEndTime());
 
-            Event created = eventService.createEvent(event, createdBy, dossierId, participantIds);
+            EventDTO created = eventService.createEvent(event, createdBy, dossierId, participantIds);
 
             // Retourner avec avertissement si conflits détectés
             if (!conflicts.isEmpty()) {
@@ -58,7 +59,7 @@ public class EventController {
     @GetMapping("/my-agenda")
     public ResponseEntity<ApiResponse> getMyAgenda(@RequestParam UUID userId) {
         try {
-            List<Event> events = eventService.getMyEvents(userId);
+            List<EventDTO> events = eventService.getMyEvents(userId);
             return ResponseEntity.ok(new ApiResponse(true, "Mon agenda récupéré avec succès", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -70,7 +71,7 @@ public class EventController {
     @GetMapping("/cabinet-agenda")
     public ResponseEntity<ApiResponse> getCabinetAgenda(@RequestParam UUID userId) {
         try {
-            List<Event> events = eventService.getCabinetEvents(userId);
+            List<EventDTO> events = eventService.getCabinetEvents(userId);
             return ResponseEntity.ok(new ApiResponse(true, "Agenda cabinet récupéré avec succès", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -86,7 +87,7 @@ public class EventController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
     ) {
         try {
-            List<Event> events = eventService.getMyEventsByDate(userId, startDate, endDate);
+            List<EventDTO> events = eventService.getMyEventsByDate(userId, startDate, endDate);
             return ResponseEntity.ok(new ApiResponse(true, "Événements filtrés par date", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -100,7 +101,7 @@ public class EventController {
             @RequestParam Event.EventType type
     ) {
         try {
-            List<Event> events = eventService.getMyEventsByType(userId, type);
+            List<EventDTO> events = eventService.getMyEventsByType(userId, type);
             return ResponseEntity.ok(new ApiResponse(true, "Événements filtrés par type", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -114,7 +115,7 @@ public class EventController {
             @RequestParam UUID dossierId
     ) {
         try {
-            List<Event> events = eventService.getMyEventsByDossier(userId, dossierId);
+            List<EventDTO> events = eventService.getMyEventsByDossier(userId, dossierId);
             return ResponseEntity.ok(new ApiResponse(true, "Événements filtrés par dossier", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -130,7 +131,7 @@ public class EventController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
     ) {
         try {
-            List<Event> events = eventService.getCabinetEventsByDate(userId, startDate, endDate);
+            List<EventDTO> events = eventService.getCabinetEventsByDate(userId, startDate, endDate);
             return ResponseEntity.ok(new ApiResponse(true, "Agenda cabinet filtré par date", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -144,7 +145,7 @@ public class EventController {
             @RequestParam Event.EventType type
     ) {
         try {
-            List<Event> events = eventService.getCabinetEventsByType(userId, type);
+            List<EventDTO> events = eventService.getCabinetEventsByType(userId, type);
             return ResponseEntity.ok(new ApiResponse(true, "Agenda cabinet filtré par type", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -158,7 +159,7 @@ public class EventController {
             @RequestParam UUID dossierId
     ) {
         try {
-            List<Event> events = eventService.getCabinetEventsByDossier(userId, dossierId);
+            List<EventDTO> events = eventService.getCabinetEventsByDossier(userId, dossierId);
             return ResponseEntity.ok(new ApiResponse(true, "Agenda cabinet filtré par dossier", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -174,7 +175,7 @@ public class EventController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end
     ) {
         try {
-            List<Event> conflicts = eventService.checkConflicts(userId, start, end);
+            List<EventDTO> conflicts = eventService.checkConflicts(userId, start, end);
             Map<String, Object> data = new HashMap<>();
             data.put("conflicts", conflicts);
             data.put("hasConflicts", !conflicts.isEmpty());
@@ -191,7 +192,7 @@ public class EventController {
     @GetMapping("/upcoming")
     public ResponseEntity<ApiResponse> getUpcomingEvents(@RequestParam UUID userId) {
         try {
-            List<Event> events = eventService.getUpcomingEvents(userId);
+            List<EventDTO> events = eventService.getUpcomingEvents(userId);
             return ResponseEntity.ok(new ApiResponse(true, "Prochains événements", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -202,7 +203,7 @@ public class EventController {
     @GetMapping("/reminders")
     public ResponseEntity<ApiResponse> getEventsNeedingReminder(@RequestParam UUID userId) {
         try {
-            List<Event> events = eventService.getEventsNeedingReminder(userId);
+            List<EventDTO> events = eventService.getEventsNeedingReminder(userId);
             return ResponseEntity.ok(new ApiResponse(true, "Événements nécessitant un rappel", events));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
@@ -214,7 +215,7 @@ public class EventController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse> getEventById(@PathVariable UUID id) {
         try {
-            Optional<Event> event = eventService.getEventById(id);
+            Optional<EventDTO> event = eventService.getEventById(id);
             if (event.isPresent()) {
                 return ResponseEntity.ok(new ApiResponse(true, "Événement trouvé", event.get()));
             } else {
@@ -233,7 +234,7 @@ public class EventController {
             @RequestParam(required = false) Set<UUID> participantIds
     ) {
         try {
-            Event updated = eventService.updateEvent(id, updatedEvent, participantIds);
+            EventDTO updated = eventService.updateEvent(id, updatedEvent, participantIds);
             return ResponseEntity.ok(new ApiResponse(true, "Événement mis à jour avec succès", updated));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
