@@ -1,5 +1,6 @@
 package myavocat.legit.service;
 
+import myavocat.legit.dto.EventDTO;
 import myavocat.legit.model.Event;
 import myavocat.legit.model.User;
 import myavocat.legit.model.Dossier;
@@ -30,8 +31,8 @@ public class EventService {
         this.dossierRepository = dossierRepository;
     }
 
-    // ✅ CRÉATION D'UN ÉVÉNEMENT
-    public Event createEvent(Event event, UUID createdById, UUID dossierId, Set<UUID> participantIds) {
+    // ✅ CRÉATION D'UN ÉVÉNEMENT - Retourne DTO
+    public EventDTO createEvent(Event event, UUID createdById, UUID dossierId, Set<UUID> participantIds) {
         User creator = userRepository.findById(createdById)
                 .orElseThrow(() -> new RuntimeException("Créateur introuvable"));
 
@@ -66,33 +67,28 @@ public class EventService {
             event.setPriority(Event.EventPriority.NORMALE);
         }
 
-        return eventRepository.save(event);
+        Event savedEvent = eventRepository.save(event);
+        return EventDTO.fromEntity(savedEvent);
     }
 
-    // ✅ VUE "MON AGENDA" - Combine événements créés + participation
-    public List<Event> getMyEvents(UUID userId) {
-        List<Event> createdEvents = eventRepository.findByCreatedById(userId);
-        List<Event> participantEvents = eventRepository.findByParticipantsId(userId);
-
-        // Combiner et supprimer les doublons
-        Set<Event> allEvents = new HashSet<>();
-        allEvents.addAll(createdEvents);
-        allEvents.addAll(participantEvents);
-
-        return allEvents.stream()
-                .sorted(Comparator.comparing(Event::getStart))
+    // ✅ VUE "MON AGENDA" - Retourne DTOs
+    public List<EventDTO> getMyEvents(UUID userId) {
+        List<Event> events = getMyEventsInternal(userId);
+        return events.stream()
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    // ✅ VUE "MON AGENDA" AVEC FILTRES
-    public List<Event> getMyEventsByDate(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
-        List<Event> myEvents = getMyEvents(userId);
+    // ✅ VUE "MON AGENDA" AVEC FILTRES - Retournent DTOs
+    public List<EventDTO> getMyEventsByDate(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
+        List<Event> myEvents = getMyEventsInternal(userId);
         return myEvents.stream()
                 .filter(event -> !event.getStart().isBefore(startDate) && !event.getStart().isAfter(endDate))
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    public List<Event> getMyEventsByType(UUID userId, Event.EventType type) {
+    public List<EventDTO> getMyEventsByType(UUID userId, Event.EventType type) {
         List<Event> createdEvents = eventRepository.findByCreatedByIdAndType(userId, type);
         List<Event> participantEvents = eventRepository.findByParticipantsId(userId).stream()
                 .filter(event -> event.getType() == type)
@@ -104,10 +100,11 @@ public class EventService {
 
         return allEvents.stream()
                 .sorted(Comparator.comparing(Event::getStart))
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    public List<Event> getMyEventsByDossier(UUID userId, UUID dossierId) {
+    public List<EventDTO> getMyEventsByDossier(UUID userId, UUID dossierId) {
         List<Event> createdEvents = eventRepository.findByCreatedByIdAndDossierId(userId, dossierId);
         List<Event> participantEvents = eventRepository.findByParticipantsId(userId).stream()
                 .filter(event -> event.getDossier() != null && event.getDossier().getId().equals(dossierId))
@@ -119,39 +116,28 @@ public class EventService {
 
         return allEvents.stream()
                 .sorted(Comparator.comparing(Event::getStart))
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    // ✅ VUE "AGENDA CABINET" - Événements publics du cabinet
-    public List<Event> getCabinetEvents(UUID userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
-
-        if (user.getOffice() == null) {
-            throw new RuntimeException("Utilisateur non rattaché à un cabinet");
-        }
-
-        UUID officeId = user.getOffice().getId();
-
-        // Récupérer tous les événements du cabinet
-        List<Event> allOfficeEvents = eventRepository.findByCreatedByOfficeId(officeId);
-
-        // Filtrer pour ne garder que les événements publics + télétravails
-        return allOfficeEvents.stream()
-                .filter(event -> !event.isPrivate() || event.getType() == Event.EventType.TELETRAVAIL)
-                .sorted(Comparator.comparing(Event::getStart))
+    // ✅ VUE "AGENDA CABINET" - Retourne DTOs
+    public List<EventDTO> getCabinetEvents(UUID userId) {
+        List<Event> events = getCabinetEventsInternal(userId);
+        return events.stream()
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    // ✅ VUE "AGENDA CABINET" AVEC FILTRES
-    public List<Event> getCabinetEventsByDate(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
-        List<Event> cabinetEvents = getCabinetEvents(userId);
+    // ✅ VUE "AGENDA CABINET" AVEC FILTRES - Retournent DTOs
+    public List<EventDTO> getCabinetEventsByDate(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
+        List<Event> cabinetEvents = getCabinetEventsInternal(userId);
         return cabinetEvents.stream()
                 .filter(event -> !event.getStart().isBefore(startDate) && !event.getStart().isAfter(endDate))
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    public List<Event> getCabinetEventsByType(UUID userId, Event.EventType type) {
+    public List<EventDTO> getCabinetEventsByType(UUID userId, Event.EventType type) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
@@ -162,44 +148,69 @@ public class EventService {
         return typeEvents.stream()
                 .filter(event -> !event.isPrivate() || event.getType() == Event.EventType.TELETRAVAIL)
                 .sorted(Comparator.comparing(Event::getStart))
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    public List<Event> getCabinetEventsByDossier(UUID userId, UUID dossierId) {
-        List<Event> cabinetEvents = getCabinetEvents(userId);
+    public List<EventDTO> getCabinetEventsByDossier(UUID userId, UUID dossierId) {
+        List<Event> cabinetEvents = getCabinetEventsInternal(userId);
         return cabinetEvents.stream()
                 .filter(event -> event.getDossier() != null && event.getDossier().getId().equals(dossierId))
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    // ✅ GESTION DES CONFLITS - Version simplifiée
-    public List<Event> checkConflicts(UUID userId, LocalDateTime start, LocalDateTime end) {
-        List<Event> myEvents = getMyEvents(userId);
+    // ✅ GESTION DES CONFLITS - Retourne DTOs
+    public List<EventDTO> checkConflicts(UUID userId, LocalDateTime start, LocalDateTime end) {
+        List<Event> conflicts = checkConflictsInternal(userId, start, end);
+        return conflicts.stream()
+                .map(EventDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ MÉTHODES UTILITAIRES - Retournent DTOs
+    public List<EventDTO> getUpcomingEvents(UUID userId) {
+        List<Event> myEvents = getMyEventsInternal(userId);
+        LocalDateTime now = LocalDateTime.now();
+
         return myEvents.stream()
-                .filter(event ->
-                        (event.getStart().isBefore(end) && event.getEndTime().isAfter(start)))
+                .filter(event -> event.getStart().isAfter(now) && event.getStatus() != Event.EventStatus.TERMINE)
+                .sorted(Comparator.comparing(Event::getStart))
+                .map(EventDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
-    public boolean hasConflicts(UUID userId, LocalDateTime start, LocalDateTime end) {
-        return !checkConflicts(userId, start, end).isEmpty();
+    public List<EventDTO> getEventsNeedingReminder(UUID userId) {
+        List<Event> upcomingEvents = getMyEventsInternal(userId);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime reminderTime = now.plusMinutes(60);
+
+        return upcomingEvents.stream()
+                .filter(event -> event.getStart().isAfter(now) && event.getStatus() != Event.EventStatus.TERMINE)
+                .filter(event -> event.getReminderMinutesBefore() != null)
+                .filter(event -> event.getStart().isAfter(now) && event.getStart().isBefore(reminderTime))
+                .map(EventDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    // ✅ MÉTHODES CRUD DE BASE
-    public Optional<Event> getEventById(UUID id) {
-        return eventRepository.findById(id);
+    // ✅ CRUD DE BASE - Retournent DTOs
+    public Optional<EventDTO> getEventById(UUID id) {
+        return eventRepository.findById(id)
+                .map(EventDTO::fromEntity);
     }
 
     public void deleteEvent(UUID id) {
         eventRepository.deleteById(id);
     }
 
-    public List<Event> getAllEvents() {
-        return eventRepository.findAll();
+    public List<EventDTO> getAllEvents() {
+        return eventRepository.findAll().stream()
+                .map(EventDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    // ✅ MISE À JOUR SIMPLIFIÉE
-    public Event updateEvent(UUID eventId, Event updatedData, Set<UUID> participantIds) {
+    // ✅ MISE À JOUR - Retourne DTO
+    public EventDTO updateEvent(UUID eventId, Event updatedData, Set<UUID> participantIds) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new RuntimeException("Événement non trouvé"));
 
@@ -233,28 +244,59 @@ public class EventService {
             event.setParticipants(participants);
         }
 
-        return eventRepository.save(event);
+        Event updatedEvent = eventRepository.save(event);
+        return EventDTO.fromEntity(updatedEvent);
     }
 
-    // ✅ MÉTHODES UTILITAIRES
-    public List<Event> getUpcomingEvents(UUID userId) {
-        List<Event> myEvents = getMyEvents(userId);
-        LocalDateTime now = LocalDateTime.now();
+    // ===== MÉTHODES INTERNES (RETOURNENT DES ENTITÉS) =====
 
-        return myEvents.stream()
-                .filter(event -> event.getStart().isAfter(now) && event.getStatus() != Event.EventStatus.TERMINE)
+    // ✅ MÉTHODE INTERNE - "MON AGENDA" (entités)
+    private List<Event> getMyEventsInternal(UUID userId) {
+        List<Event> createdEvents = eventRepository.findByCreatedById(userId);
+        List<Event> participantEvents = eventRepository.findByParticipantsId(userId);
+
+        // Combiner et supprimer les doublons
+        Set<Event> allEvents = new HashSet<>();
+        allEvents.addAll(createdEvents);
+        allEvents.addAll(participantEvents);
+
+        return allEvents.stream()
                 .sorted(Comparator.comparing(Event::getStart))
                 .collect(Collectors.toList());
     }
 
-    public List<Event> getEventsNeedingReminder(UUID userId) {
-        List<Event> upcomingEvents = getUpcomingEvents(userId);
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime reminderTime = now.plusMinutes(60);
+    // ✅ MÉTHODE INTERNE - "AGENDA CABINET" (entités)
+    private List<Event> getCabinetEventsInternal(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-        return upcomingEvents.stream()
-                .filter(event -> event.getReminderMinutesBefore() != null)
-                .filter(event -> event.getStart().isAfter(now) && event.getStart().isBefore(reminderTime))
+        if (user.getOffice() == null) {
+            throw new RuntimeException("Utilisateur non rattaché à un cabinet");
+        }
+
+        UUID officeId = user.getOffice().getId();
+
+        // Récupérer tous les événements du cabinet
+        List<Event> allOfficeEvents = eventRepository.findByCreatedByOfficeId(officeId);
+
+        // Filtrer pour ne garder que les événements publics + télétravails
+        return allOfficeEvents.stream()
+                .filter(event -> !event.isPrivate() || event.getType() == Event.EventType.TELETRAVAIL)
+                .sorted(Comparator.comparing(Event::getStart))
                 .collect(Collectors.toList());
+    }
+
+    // ✅ MÉTHODE INTERNE - CONFLITS (entités)
+    private List<Event> checkConflictsInternal(UUID userId, LocalDateTime start, LocalDateTime end) {
+        List<Event> myEvents = getMyEventsInternal(userId);
+        return myEvents.stream()
+                .filter(event ->
+                        (event.getStart().isBefore(end) && event.getEndTime().isAfter(start)))
+                .collect(Collectors.toList());
+    }
+
+    // ✅ MÉTHODE UTILITAIRE
+    public boolean hasConflicts(UUID userId, LocalDateTime start, LocalDateTime end) {
+        return !checkConflictsInternal(userId, start, end).isEmpty();
     }
 }
