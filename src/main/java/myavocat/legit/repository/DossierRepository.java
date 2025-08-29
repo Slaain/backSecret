@@ -1,6 +1,8 @@
 package myavocat.legit.repository;
 
+import myavocat.legit.model.Client;
 import myavocat.legit.model.Dossier;
+import myavocat.legit.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +19,9 @@ public interface DossierRepository extends JpaRepository<Dossier, UUID> {
     List<Dossier> findByOfficeId(UUID officeId);
     List<Dossier> findByStatut(String statut);
     List<Dossier> findByAvocatIdAndStatut(UUID avocatId, String statut);
+    List<Dossier> findByClientAndAvocat(Client client, User avocat);
+    List<Dossier> findByClientsContainingAndAvocat(Client client, User avocat);
+
 
 
 

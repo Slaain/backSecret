@@ -33,17 +33,17 @@ dependencies {
 	implementation("jakarta.annotation:jakarta.annotation-api:2.1.1")
 	implementation("org.flywaydb:flyway-database-postgresql")
 
-	//Mail
-	implementation ("org.springframework.boot:spring-boot-starter-mail")
-	implementation ("com.itextpdf:itext7-core:7.2.5")
+	// Mail
+	implementation("org.springframework.boot:spring-boot-starter-mail")
+	implementation("com.sun.mail:javax.mail:1.6.2")
+	implementation("org.springframework:spring-context-support")
+
+	// PDF
+	implementation("com.itextpdf:itext7-core:7.2.5")
 	implementation("com.itextpdf:kernel:7.2.5")
 	implementation("com.itextpdf:layout:7.2.5")
 	implementation("com.itextpdf:io:7.2.5")
 	implementation("com.itextpdf:forms:7.2.5")
-
-	// Supprimez ces lignes problématiques :
-	// implementation ("com.itextpdf:itext7-core:7.2.5")
-	// implementation("implementation 'com.itextpdf:itext7-core:7.2.4'")
 
 	// JWT
 	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
@@ -51,7 +51,6 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 
 	implementation("commons-io:commons-io:2.13.0")
-
 	implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
 
 	compileOnly("org.projectlombok:lombok")
@@ -62,6 +61,7 @@ dependencies {
 	testImplementation("org.springframework.security:spring-security-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+
 
 tasks.withType<Test> {
 	useJUnitPlatform()

@@ -145,7 +145,7 @@ public class Dossier {
     }
 
     /**
-     * Retire un adversaire de la liste
+     * Retire un adversaire de la listex
      */
     public void removeAdversaire(Adversaire adversaire) {
         if (this.adversaires != null) {
