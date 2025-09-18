@@ -15,9 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class GmailWebhookService {
@@ -42,6 +40,9 @@ public class GmailWebhookService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // 🔹 Cache en mémoire pour stocker le dernier historyId par compte
+    private final Map<UUID, String> lastHistoryIds = new HashMap<>();
+
     /**
      * Traiter une notification Pub/Sub de Gmail
      */
@@ -57,7 +58,7 @@ public class GmailWebhookService {
             logger.debug("Decoded Pub/Sub data: {}", decodedData);
 
             JsonNode gmailData = objectMapper.readTree(decodedData);
-            String historyId = gmailData.get("historyId").asText();
+            String newHistoryId = gmailData.get("historyId").asText();
             String emailAddress = gmailData.get("emailAddress").asText();
 
             // Trouver le compte email correspondant
@@ -69,8 +70,24 @@ public class GmailWebhookService {
 
             EmailAccount account = accountOpt.get();
 
-            // Récupérer l'historique Gmail depuis le dernier sync
-            return processGmailHistory(account, historyId);
+            // 🔹 Vérifier si on a déjà un lastHistoryId en mémoire
+            String lastHistoryId = lastHistoryIds.get(account.getId());
+            EmailWebhookLog result;
+
+            if (lastHistoryId != null) {
+                logger.info("Webhook Gmail reçu pour {}, utilisation du lastHistoryId={} (newHistoryId={})",
+                        emailAddress, lastHistoryId, newHistoryId);
+                result = processGmailHistory(account, lastHistoryId);
+            } else {
+                logger.info("Webhook Gmail reçu pour {}, pas de lastHistoryId, utilisation du newHistoryId={}",
+                        emailAddress, newHistoryId);
+                result = processGmailHistory(account, newHistoryId);
+            }
+
+            // 🔹 Mettre à jour la valeur en mémoire
+            lastHistoryIds.put(account.getId(), newHistoryId);
+
+            return result;
 
         } catch (Exception e) {
             logger.error("Erreur lors du traitement de la notification Pub/Sub Gmail", e);
@@ -83,17 +100,15 @@ public class GmailWebhookService {
      */
     private EmailWebhookLog processGmailHistory(EmailAccount account, String historyId) {
         try {
-            // Récupérer le token d'accès valide
             String accessToken = oauthTokenService.getValidAccessToken(account);
             if (accessToken == null) {
                 logger.error("Token d'accès invalide pour le compte: {}", account.getEmailAddress());
                 return null;
             }
 
-            // Appeler l'API Gmail History
             String historyUrl = String.format("%s/users/%s/history?startHistoryId=%s",
                     oauthConfig.getGmailApiBase(),
-                    "me", // ou account.getEmailAddress()
+                    "me",
                     historyId);
 
             HttpHeaders headers = new HttpHeaders();
@@ -130,7 +145,6 @@ public class GmailWebhookService {
 
             JsonNode history = historyResponse.get("history");
 
-            // Parcourir l'historique pour trouver les nouveaux messages
             for (JsonNode historyItem : history) {
                 if (historyItem.has("messagesAdded")) {
                     JsonNode messagesAdded = historyItem.get("messagesAdded");
@@ -139,10 +153,9 @@ public class GmailWebhookService {
                         JsonNode message = messageAdded.get("message");
                         String messageId = message.get("id").asText();
 
-                        // Traiter chaque nouveau message
                         EmailWebhookLog result = processGmailMessage(account, messageId);
                         if (result != null) {
-                            return result; // Retourner le premier traitement réussi
+                            return result;
                         }
                     }
                 }
@@ -161,13 +174,11 @@ public class GmailWebhookService {
      */
     private EmailWebhookLog processGmailMessage(EmailAccount account, String messageId) {
         try {
-            // Récupérer le token d'accès valide
             String accessToken = oauthTokenService.getValidAccessToken(account);
             if (accessToken == null) {
                 return null;
             }
 
-            // Récupérer les détails du message
             String messageUrl = String.format("%s/users/%s/messages/%s",
                     oauthConfig.getGmailApiBase(),
                     "me",
@@ -206,7 +217,6 @@ public class GmailWebhookService {
             JsonNode payload = message.get("payload");
             JsonNode headers = payload.get("headers");
 
-            // Extraire les headers importants
             String senderEmail = null;
             String subject = null;
 
@@ -226,15 +236,12 @@ public class GmailWebhookService {
                 return null;
             }
 
-            // Extraire les pièces jointes
             List<EmailWebhookService.AttachmentData> attachments = extractGmailAttachments(payload, messageId, account);
 
             if (attachments.isEmpty()) {
-                logger.info("Aucune pièce jointe trouvée dans le message: {}", messageId);
-                return null;
+                logger.warn("Aucune pièce jointe trouvée mais on traite quand même le message: {}", messageId);
             }
 
-            // Traiter via le service principal
             return emailWebhookService.processEmailWebhook(
                     EmailWebhookLog.WebhookType.GMAIL_PUBSUB,
                     account.getId().toString(),
@@ -252,9 +259,6 @@ public class GmailWebhookService {
         }
     }
 
-    /**
-     * Extraire les pièces jointes d'un message Gmail
-     */
     private List<EmailWebhookService.AttachmentData> extractGmailAttachments(JsonNode payload, String messageId, EmailAccount account) {
         List<EmailWebhookService.AttachmentData> attachments = new ArrayList<>();
 
@@ -267,20 +271,15 @@ public class GmailWebhookService {
         return attachments;
     }
 
-    /**
-     * Extraction récursive des pièces jointes depuis les parties du message
-     */
     private void extractAttachmentsFromParts(JsonNode part, List<EmailWebhookService.AttachmentData> attachments,
                                              String messageId, EmailAccount account) {
 
-        // Vérifier si cette partie est une pièce jointe
         if (part.has("filename") && part.get("filename").asText().length() > 0) {
             String filename = part.get("filename").asText();
 
             if (part.has("body") && part.get("body").has("attachmentId")) {
                 String attachmentId = part.get("body").get("attachmentId").asText();
 
-                // Télécharger la pièce jointe
                 byte[] attachmentData = downloadGmailAttachment(messageId, attachmentId, account);
                 if (attachmentData != null) {
                     String contentType = part.has("mimeType") ? part.get("mimeType").asText() : "application/octet-stream";
@@ -290,7 +289,6 @@ public class GmailWebhookService {
             }
         }
 
-        // Traitement récursif des sous-parties
         if (part.has("parts")) {
             for (JsonNode subPart : part.get("parts")) {
                 extractAttachmentsFromParts(subPart, attachments, messageId, account);
@@ -298,9 +296,6 @@ public class GmailWebhookService {
         }
     }
 
-    /**
-     * Télécharger une pièce jointe Gmail via son ID
-     */
     private byte[] downloadGmailAttachment(String messageId, String attachmentId, EmailAccount account) {
         try {
             String accessToken = oauthTokenService.getValidAccessToken(account);
@@ -323,8 +318,6 @@ public class GmailWebhookService {
             if (response.getStatusCode() == HttpStatus.OK) {
                 JsonNode attachmentResponse = objectMapper.readTree(response.getBody());
                 String data = attachmentResponse.get("data").asText();
-
-                // Décoder les données Base64 URL-safe
                 return Base64.getUrlDecoder().decode(data);
             } else {
                 logger.error("Erreur téléchargement pièce jointe Gmail: {}", response.getStatusCode());
@@ -347,8 +340,7 @@ public class GmailWebhookService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         Map<String, Object> body = new HashMap<>();
-        body.put("labelIds", List.of("INBOX"));
-        body.put("topicName", "projects/<TON_PROJET_GCP>/topics/<TON_TOPIC>");
+        body.put("topicName", "projects/annular-cogency-470507-s6/topics/gmail-notifications");
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
         ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);

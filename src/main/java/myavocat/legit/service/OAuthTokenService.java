@@ -156,23 +156,32 @@ public class OAuthTokenService {
      */
     public String getValidAccessToken(EmailAccount account) {
         try {
-            // Vérifier si le token actuel est encore valide
             if (account.hasValidOAuthTokens()) {
+                logger.info("✅ Access token encore valide pour {}", account.getEmailAddress());
                 return decrypt(account.getEncryptedAccessToken());
             }
 
-            // Token expiré, essayer de le rafraîchir
+            logger.warn("⚠️ Access token expiré ou invalide pour {} (expiresAt={}, hasRefresh={})",
+                    account.getEmailAddress(),
+                    account.getTokenExpiresAt(),
+                    account.getEncryptedRefreshToken() != null);
+
             if (account.getEncryptedRefreshToken() != null) {
+                logger.info("🔄 Tentative de refresh du token pour {}", account.getEmailAddress());
                 if (refreshTokens(account)) {
+                    logger.info("✅ Refresh réussi pour {}", account.getEmailAddress());
                     return decrypt(account.getEncryptedAccessToken());
+                } else {
+                    logger.error("❌ Échec du refresh du token pour {}", account.getEmailAddress());
                 }
+            } else {
+                logger.error("❌ Aucun refresh_token dispo pour {}", account.getEmailAddress());
             }
 
-            logger.warn("Aucun token valide disponible pour: {}", account.getEmailAddress());
             return null;
 
         } catch (Exception e) {
-            logger.error("Erreur lors de l'obtention du token d'accès", e);
+            logger.error("Erreur lors de l'obtention du token d'accès pour {}", account.getEmailAddress(), e);
             return null;
         }
     }

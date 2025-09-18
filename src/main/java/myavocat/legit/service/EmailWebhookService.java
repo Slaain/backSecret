@@ -87,8 +87,9 @@ public class EmailWebhookService {
             }
 
             Client client = clientOpt.get();
-            log.setClient(client);
+            log.setClient(client); // ✅ associer au log (remplit client_id en DB)
             logger.info("Client identifié: {} {}", client.getNom(), client.getPrenom());
+
 
             // Trouver le dossier actif
             Optional<Dossier> dossierOpt = findActiveDossier(client, log.getEmailAccount().getUser());
@@ -272,6 +273,7 @@ public class EmailWebhookService {
         e.printStackTrace(pw);
         return sw.toString();
     }
+
 
     // Classes utilitaires
 
