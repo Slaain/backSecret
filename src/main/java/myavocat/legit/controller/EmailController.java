@@ -1,7 +1,9 @@
 package myavocat.legit.controller;
 
 import myavocat.legit.model.Client;
+import myavocat.legit.model.Email;
 import myavocat.legit.model.EmailWebhookLog;
+import myavocat.legit.repository.EmailRepository;
 import myavocat.legit.repository.EmailWebhookLogRepository;
 import myavocat.legit.response.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,10 @@ public class EmailController {
 
     @Autowired
     private EmailWebhookLogRepository emailWebhookLogRepository;
+
+    @Autowired
+    private EmailRepository emailRepository;
+
 
     /**
      * Récupérer les X derniers emails (par défaut 20)
@@ -74,5 +80,14 @@ public class EmailController {
                 .toList();
 
         return ResponseEntity.ok(new ApiResponse(true, "Emails pour le client " + clientId, emails));
+    }
+
+    /**
+     * Récupérer les derniers emails sauvegardés (table emails)
+     */
+    @GetMapping("/received")
+    public ResponseEntity<ApiResponse> getReceivedEmails(@RequestParam(defaultValue = "20") int limit) {
+        List<Email> emails = emailRepository.findTop10ByOrderByReceivedAtDesc();
+        return ResponseEntity.ok(new ApiResponse(true, "Emails reçus récupérés", emails));
     }
 }

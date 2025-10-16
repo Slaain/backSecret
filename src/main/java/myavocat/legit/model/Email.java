@@ -1,5 +1,6 @@
 package myavocat.legit.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -19,22 +20,23 @@ public class Email {
     private UUID id;
 
     @Column(nullable = false)
-    private String sender; // expéditeur
-
-    @Column(nullable = true)
-    private String subject; // objet du mail
-
-    @Column(columnDefinition = "TEXT")
-    private String snippet; // aperçu du contenu
-
-    @Column(nullable = true)
-    private String attachmentFilename; // nom de la pièce jointe
+    private String sender;
 
     @Column(nullable = false)
-    private LocalDateTime receivedAt; // date de réception
+    private String subject;
 
-    // Relation vers le compte mail (idris1390@gmail.com par ex)
+    @Column(columnDefinition = "TEXT")
+    private String snippet;
+
+    @Column(name = "attachment_filename")
+    private String attachmentFilename;
+
+    // 🚫 On ne veut pas exposer cet objet dans le JSON
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "email_account_id")
+    @JsonIgnore
     private EmailAccount emailAccount;
+
+    @Column(nullable = false)
+    private LocalDateTime receivedAt;
 }

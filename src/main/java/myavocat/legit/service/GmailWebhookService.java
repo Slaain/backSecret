@@ -2,9 +2,11 @@ package myavocat.legit.service;
 
 import myavocat.legit.config.EmailOAuthConfig;
 import myavocat.legit.config.WebhookConfig;
+import myavocat.legit.model.Email;
 import myavocat.legit.model.EmailAccount;
 import myavocat.legit.model.EmailWebhookLog;
 import myavocat.legit.repository.EmailAccountRepository;
+import myavocat.legit.repository.EmailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -30,6 +33,9 @@ public class GmailWebhookService {
 
     @Autowired
     private EmailAccountRepository emailAccountRepository;
+
+    @Autowired
+    private EmailRepository emailRepository;
 
     @Autowired
     private EmailWebhookService emailWebhookService;
@@ -262,6 +268,24 @@ public class GmailWebhookService {
 
             if (attachments.isEmpty()) {
                 logger.warn("Aucune pièce jointe trouvée mais on traite quand même le message: {}", messageId);
+            }
+// --- Enregistrer le mail dans la table emails ---
+            try {
+                Email email = Email.builder()
+                        .sender(senderEmail)
+                        .subject(subject)
+                        .receivedAt(LocalDateTime.now())
+                        .snippet("(Message reçu via Gmail Pub/Sub)")
+                        .attachmentFilename(
+                                attachments.isEmpty() ? null : attachments.get(0).getFilename()
+                        )
+                        .emailAccount(account)
+                        .build();
+
+                emailRepository.save(email);
+                logger.info("📨 Email sauvegardé dans la table 'emails': {} ({})", subject, senderEmail);
+            } catch (Exception e) {
+                logger.error("Erreur lors de la sauvegarde de l'email dans la table 'emails'", e);
             }
 
             return emailWebhookService.processEmailWebhook(
