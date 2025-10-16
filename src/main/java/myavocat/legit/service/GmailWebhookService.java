@@ -94,6 +94,14 @@ public class GmailWebhookService {
             return null;
         }
     }
+    public EmailWebhookLog forceSync(EmailAccount account) {
+        String lastHistoryId = account.getLastHistoryId();
+        if (lastHistoryId == null) {
+            throw new RuntimeException("Pas de lastHistoryId défini pour " + account.getEmailAddress());
+        }
+        return processGmailHistory(account, lastHistoryId);
+    }
+
 
     /**
      * Traiter l'historique Gmail pour récupérer les nouveaux emails
@@ -139,32 +147,46 @@ public class GmailWebhookService {
             JsonNode historyResponse = objectMapper.readTree(responseBody);
 
             if (!historyResponse.has("history")) {
-                logger.info("Aucun nouvel historique trouvé");
+                logger.info("❌ Aucun nouvel historique trouvé dans la réponse");
+                logger.debug("Réponse complète: {}", responseBody);
                 return null;
             }
 
             JsonNode history = historyResponse.get("history");
+            logger.info("✅ Historique trouvé avec {} items", history.size());
 
             for (JsonNode historyItem : history) {
+                logger.info("📋 Traitement item historique");
+
                 if (historyItem.has("messagesAdded")) {
                     JsonNode messagesAdded = historyItem.get("messagesAdded");
+                    logger.info("📧 {} messages trouvés dans cet item", messagesAdded.size());
 
                     for (JsonNode messageAdded : messagesAdded) {
                         JsonNode message = messageAdded.get("message");
                         String messageId = message.get("id").asText();
 
+                        logger.info("🔹 Traitement du message: {}", messageId);
+
+
                         EmailWebhookLog result = processGmailMessage(account, messageId);
                         if (result != null) {
+                            logger.info("✅ Message traité avec succès: status={}", result.getStatus());
                             return result;
+                        } else {
+                            logger.warn("⚠️ Échec du traitement du message: {}", messageId);
                         }
                     }
+                } else {
+                    logger.debug("ℹ️ Pas de messagesAdded dans cet item");
                 }
             }
 
+            logger.info("⚠️ Pas de message traité avec succès");
             return null;
 
         } catch (Exception e) {
-            logger.error("Erreur lors du traitement de la réponse Gmail History", e);
+            logger.error("❌ Erreur lors du traitement de la réponse Gmail History", e);
             return null;
         }
     }

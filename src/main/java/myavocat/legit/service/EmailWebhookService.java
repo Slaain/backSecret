@@ -162,10 +162,15 @@ public class EmailWebhookService {
      * Identifier le client par son email
      */
     private Optional<Client> identifyClient(String senderEmail) {
-        String cleanEmail = extractCleanEmail(senderEmail);
-        // Utiliser la recherche insensible à la casse
+        String cleanEmail = extractCleanEmail(senderEmail)
+                .toLowerCase()
+                .trim();
+
+        logger.info("🔍 Recherche client par email: '{}'", cleanEmail);
+
         return clientRepository.findByEmailIgnoreCase(cleanEmail);
     }
+
 
     /**
      * Trouver le dossier actif pour un client
@@ -256,13 +261,15 @@ public class EmailWebhookService {
      * Extraire l'email propre (sans nom)
      */
     private String extractCleanEmail(String fullEmail) {
+        if (fullEmail == null) return "";
         if (fullEmail.contains("<") && fullEmail.contains(">")) {
             int start = fullEmail.indexOf("<") + 1;
             int end = fullEmail.indexOf(">");
-            return fullEmail.substring(start, end).trim();
+            return fullEmail.substring(start, end).trim().toLowerCase();
         }
-        return fullEmail.trim();
+        return fullEmail.trim().toLowerCase();
     }
+
 
     /**
      * Obtenir la stack trace comme string

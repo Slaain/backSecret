@@ -45,6 +45,9 @@ public class EmailAccount {
     @Column(name = "token_expires_at")
     private LocalDateTime tokenExpiresAt;
 
+    @Column(name = "last_history_id")
+    private String lastHistoryId; //
+
     // Configuration IMAP (pour fallback)
     @Column(name = "imap_host")
     private String imapHost;
